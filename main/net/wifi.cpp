@@ -137,6 +137,9 @@ bool wifi_start() {
     ESP_LOGE(kTag, "esp_wifi_init: %s", esp_err_to_name(err));
     return false;
   }
+  // Keep the driver from restoring its own STA config and auto-connecting at
+  // esp_wifi_start(); our settings are the single source of truth.
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi_event, nullptr));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_ip_event, nullptr));
 
@@ -162,14 +165,31 @@ bool wifi_connect(const char* ssid, const char* pass, int timeout_ms) {
 
   esp_wifi_set_mode(WIFI_MODE_STA);
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta));
-
-  xEventGroupClearBits(g_events, kConnectedBit | kFailedBit);
   ESP_ERROR_CHECK(esp_wifi_start());
-  esp_wifi_connect();
 
-  EventBits_t bits = xEventGroupWaitBits(g_events, kConnectedBit | kFailedBit, pdFALSE, pdFALSE,
-                                         pdMS_TO_TICKS(timeout_ms));
-  return (bits & kConnectedBit) != 0;
+  // The driver restores its own STA config from NVS and starts connecting as
+  // soon as it is started, which raises a transient DISCONNECTED event; a
+  // single wait then gave up after ~30 ms. Retry instead of trusting it.
+  const int attempts = 3;
+  int slice_ms = timeout_ms / attempts;
+  if (slice_ms < 2000) slice_ms = 2000;
+
+  for (int i = 0; i < attempts; i++) {
+    xEventGroupClearBits(g_events, kConnectedBit | kFailedBit);
+    esp_err_t err = esp_wifi_connect();
+    if (err != ESP_OK && err != ESP_ERR_WIFI_CONN) {
+      ESP_LOGW(kTag, "connect attempt %d: %s", i + 1, esp_err_to_name(err));
+    }
+
+    EventBits_t bits = xEventGroupWaitBits(g_events, kConnectedBit | kFailedBit, pdFALSE,
+                                           pdFALSE, pdMS_TO_TICKS(slice_ms));
+    if ((bits & kConnectedBit) != 0) return true;
+    if (i + 1 < attempts) {
+      ESP_LOGW(kTag, "attempt %d did not connect, retrying", i + 1);
+      vTaskDelay(pdMS_TO_TICKS(500));
+    }
+  }
+  return false;
 }
 
 bool wifi_save_credentials(const char* ssid, const char* pass) {

@@ -18,6 +18,7 @@
 #include "freertos/task.h"
 #include "input/buttons.h"
 #include "net/http_server.h"
+#include "net/serial_cli.h"
 #include "net/wifi.h"
 #include "nvs_flash.h"
 #include "screens/market_screen.h"
@@ -46,6 +47,7 @@ volatile bool g_pending_screen = false;
 volatile bool g_pending_refresh = false;
 volatile bool g_pending_repair = false;
 char g_pending_id[24] = {};
+bool g_wifi_changed = false;
 
 int find_screen(const char* id) {
   for (int i = 0; i < kScreenCount; i++) {
@@ -115,9 +117,22 @@ void run() {
   }
   buttons::begin();
   power::init();
+  net::serial_cli_start();
 
   const bool online = net::wifi_start();
-  if (online) net::time_sync_start();
+  if (online) {
+    net::time_sync_start();
+    // HTTPS certificate verification fails while the clock is still at 1970
+    // ("certificate is not yet valid"), so give SNTP a moment before the first
+    // fetch. Typical sync is well under a second.
+    int waited = 0;
+    while (!net::time_valid() && waited < 8000) {
+      vTaskDelay(pdMS_TO_TICKS(200));
+      waited += 200;
+    }
+    ESP_LOGI(kTag, "clock %s after %d ms", net::time_valid() ? "synced" : "NOT synced",
+             waited);
+  }
   server::start();
   report_heap("after server");
 
@@ -267,6 +282,11 @@ bool apply_settings_json(const char* json, size_t len) {
   const cJSON* wifi = cJSON_GetObjectItemCaseSensitive(root, "wifi");
   const cJSON* ssid = cJSON_GetObjectItemCaseSensitive(wifi, "ssid");
   if (cJSON_IsString(ssid)) settings::set_str(s.ssid, sizeof(s.ssid), ssid->valuestring);
+  const cJSON* pass = cJSON_GetObjectItemCaseSensitive(wifi, "password");
+  if (cJSON_IsString(pass) && pass->valuestring[0] != '\0') {
+    settings::set_str(s.pass, sizeof(s.pass), pass->valuestring);
+    g_wifi_changed = true;
+  }
 
   const cJSON* weather = cJSON_GetObjectItemCaseSensitive(root, "weather");
   if (cJSON_IsObject(weather)) {
@@ -339,6 +359,12 @@ bool apply_settings_json(const char* json, size_t len) {
 }
 
 void reboot() { esp_restart(); }
+
+bool take_wifi_changed() {
+  bool changed = g_wifi_changed;
+  g_wifi_changed = false;
+  return changed;
+}
 
 }  // namespace app
 

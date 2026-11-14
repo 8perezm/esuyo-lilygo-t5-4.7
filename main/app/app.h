@@ -19,6 +19,10 @@ void request_repair();
 bool apply_settings_json(const char* json, size_t len);  // PUT /api/settings
 void settings_to_json(char* out, size_t cap);            // GET /api/settings
 
+// True when the last PUT carried a new Wi-Fi password, so the caller can
+// restart into it. Cleared by the caller.
+bool take_wifi_changed();
+
 void reboot();
 
 }  // namespace app

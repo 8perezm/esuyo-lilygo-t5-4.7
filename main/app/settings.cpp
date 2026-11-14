@@ -86,7 +86,12 @@ void init() {
   defaults();
 
   nvs_handle_t h;
-  if (nvs_open(kNamespace, NVS_READONLY, &h) != ESP_OK) return;
+  esp_err_t open_err = nvs_open(kNamespace, NVS_READONLY, &h);
+  if (open_err != ESP_OK) {
+    ESP_LOGW(kTag, "no settings namespace yet (%s), using defaults",
+             esp_err_to_name(open_err));
+    return;
+  }
 
   Blob blob{};
   size_t len = sizeof(blob);
@@ -116,7 +121,13 @@ void save() {
   err = nvs_set_blob(h, kKey, &blob, sizeof(blob));
   if (err == ESP_OK) err = nvs_commit(h);
   nvs_close(h);
-  if (err != ESP_OK) ESP_LOGE(kTag, "save: %s", esp_err_to_name(err));
+  if (err != ESP_OK) {
+    ESP_LOGE(kTag, "save (%u bytes): %s", static_cast<unsigned>(sizeof(blob)),
+             esp_err_to_name(err));
+  } else {
+    ESP_LOGI(kTag, "saved (%u bytes, ssid '%s')", static_cast<unsigned>(sizeof(blob)),
+             g_settings.ssid);
+  }
 }
 
 }  // namespace settings

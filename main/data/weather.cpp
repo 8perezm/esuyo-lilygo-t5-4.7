@@ -64,7 +64,7 @@ bool fetch(const CityRef& city, bool fahrenheit, data::Weather& out) {
            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,"
            "weather_code,wind_speed_10m"
            "&daily=weather_code,temperature_2m_max,temperature_2m_min,"
-           "precipitation_probability_max,time"
+           "precipitation_probability_max"
            "&timezone=auto&forecast_days=5&temperature_unit=%s",
            city.lat, city.lon, fahrenheit ? "fahrenheit" : "celsius");
 

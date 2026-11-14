@@ -24,6 +24,18 @@ namespace {
 constexpr const char* kTag = "http";
 constexpr size_t kMaxBody = 32768;
 
+// One line per request: the first thing to look at when the panel "does not
+// save" or a browser cannot reach a route.
+void log_req(httpd_req_t* req) {
+  const char* method = req->method == HTTP_GET      ? "GET"
+                       : req->method == HTTP_PUT    ? "PUT"
+                       : req->method == HTTP_POST   ? "POST"
+                       : req->method == HTTP_DELETE ? "DELETE"
+                                                    : "?";
+  ESP_LOGI(kTag, "<- %s %s (%u bytes)", method, req->uri,
+           static_cast<unsigned>(req->content_len));
+}
+
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 extern const uint8_t app_js_start[] asm("_binary_app_js_start");
@@ -79,26 +91,30 @@ std::string read_body(httpd_req_t* req) {
 }
 
 esp_err_t handle_index(httpd_req_t* req) {
+  log_req(req);
   return send_raw(req, "text/html", reinterpret_cast<const char*>(index_html_start),
                   strlen(reinterpret_cast<const char*>(index_html_start)));
 }
 
 esp_err_t handle_css(httpd_req_t* req) {
+  log_req(req);
   return send_raw(req, "text/css", reinterpret_cast<const char*>(style_css_start),
                   strlen(reinterpret_cast<const char*>(style_css_start)));
 }
 
 esp_err_t handle_js(httpd_req_t* req) {
+  log_req(req);
   return send_raw(req, "application/javascript", reinterpret_cast<const char*>(app_js_start),
                   strlen(reinterpret_cast<const char*>(app_js_start)));
 }
 
 esp_err_t handle_status(httpd_req_t* req) {
+  log_req(req);
   cJSON* root = cJSON_CreateObject();
   const esp_app_desc_t* desc = esp_app_get_description();
 
   cJSON_AddStringToObject(root, "fw", desc != nullptr ? desc->version : "?");
-  cJSON_AddNumberToObject(root, "heap", esp_get_free_heap_size());
+  cJSON_AddNumberToObject(root, "heap", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
   cJSON_AddNumberToObject(root, "psram_free", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
   cJSON_AddNumberToObject(root, "uptime_s", esp_timer_get_time() / 1000000);
   cJSON_AddNumberToObject(root, "rssi", net::wifi_rssi());
@@ -114,6 +130,7 @@ esp_err_t handle_status(httpd_req_t* req) {
 }
 
 esp_err_t handle_settings_get(httpd_req_t* req) {
+  log_req(req);
   char* buf = static_cast<char*>(malloc(8192));
   if (buf == nullptr) return httpd_resp_send_500(req);
   app::settings_to_json(buf, 8192);
@@ -123,15 +140,22 @@ esp_err_t handle_settings_get(httpd_req_t* req) {
 }
 
 esp_err_t handle_settings_put(httpd_req_t* req) {
+  log_req(req);
   std::string body = read_body(req);
   if (body.empty()) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "empty body");
   if (!app::apply_settings_json(body.c_str(), body.size())) {
     return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "bad json");
   }
-  return send_ok(req);
+  esp_err_t err = send_ok(req);
+  if (app::take_wifi_changed()) {
+    ESP_LOGI(kTag, "settings carried a new Wi-Fi password, restarting");
+    restart_soon();
+  }
+  return err;
 }
 
 esp_err_t handle_screens(httpd_req_t* req) {
+  log_req(req);
   cJSON* root = cJSON_CreateObject();
   cJSON* list = cJSON_AddArrayToObject(root, "screens");
   for (int i = 0; i < app::screen_count(); i++) {
@@ -146,6 +170,7 @@ esp_err_t handle_screens(httpd_req_t* req) {
 }
 
 esp_err_t handle_display(httpd_req_t* req) {
+  log_req(req);
   std::string body = read_body(req);
   cJSON* root = cJSON_Parse(body.c_str());
   const cJSON* screen = cJSON_GetObjectItemCaseSensitive(root, "screen");
@@ -155,6 +180,7 @@ esp_err_t handle_display(httpd_req_t* req) {
 }
 
 esp_err_t handle_refresh(httpd_req_t* req) {
+  log_req(req);
   std::string body = read_body(req);
   cJSON* root = cJSON_Parse(body.c_str());
   const cJSON* screen = cJSON_GetObjectItemCaseSensitive(root, "screen");
@@ -165,6 +191,7 @@ esp_err_t handle_refresh(httpd_req_t* req) {
 }
 
 esp_err_t handle_wifi_scan(httpd_req_t* req) {
+  log_req(req);
   auto* records = static_cast<wifi_ap_record_t*>(calloc(20, sizeof(wifi_ap_record_t)));
   if (records == nullptr) return httpd_resp_send_500(req);
   int n = net::wifi_scan(records, 20);
@@ -187,14 +214,18 @@ esp_err_t handle_wifi_scan(httpd_req_t* req) {
 }
 
 esp_err_t handle_wifi_post(httpd_req_t* req) {
+  log_req(req);
   std::string body = read_body(req);
   cJSON* root = cJSON_Parse(body.c_str());
   const cJSON* ssid = cJSON_GetObjectItemCaseSensitive(root, "ssid");
   const cJSON* pass = cJSON_GetObjectItemCaseSensitive(root, "password");
   if (!cJSON_IsString(ssid)) {
+    ESP_LOGW(kTag, "wifi post: no ssid in %u bytes", static_cast<unsigned>(body.size()));
     cJSON_Delete(root);
     return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "ssid required");
   }
+  ESP_LOGI(kTag, "wifi post: ssid '%s', password %u chars", ssid->valuestring,
+           static_cast<unsigned>(cJSON_IsString(pass) ? strlen(pass->valuestring) : 0));
   net::wifi_save_credentials(ssid->valuestring,
                              cJSON_IsString(pass) ? pass->valuestring : "");
   cJSON_Delete(root);
@@ -205,6 +236,7 @@ esp_err_t handle_wifi_post(httpd_req_t* req) {
 }
 
 esp_err_t handle_geocode(httpd_req_t* req) {
+  log_req(req);
   char query[256] = {};
   char value[128] = {};
   if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK ||
@@ -292,12 +324,14 @@ esp_err_t handle_ota(httpd_req_t* req) {
 }
 
 esp_err_t handle_reboot(httpd_req_t* req) {
+  log_req(req);
   esp_err_t err = send_ok(req);
   restart_soon();
   return err;
 }
 
 esp_err_t handle_repair(httpd_req_t* req) {
+  log_req(req);
   app::request_repair();
   return send_ok(req);
 }
@@ -306,6 +340,7 @@ esp_err_t handle_repair(httpd_req_t* req) {
 // user presses the physical buttons, and report which pins changed. This is how
 // a board revision with extra buttons gets mapped without guessing.
 esp_err_t handle_gpio_scan(httpd_req_t* req) {
+  log_req(req);
   static const int pins[] = {12, 13, 14, 34, 35, 36, 39};
   constexpr int count = sizeof(pins) / sizeof(pins[0]);
 
@@ -349,7 +384,24 @@ esp_err_t handle_gpio_scan(httpd_req_t* req) {
 }
 
 esp_err_t handle_catch_all(httpd_req_t* req) {
-  // Captive-portal behaviour: any unknown path shows the control panel.
+  log_req(req);
+  // Captive-portal probes: the OS expects a redirect it can open, not a page.
+  // Answering 200 with HTML makes Android think it is online and never open
+  // the panel, which is what happened during Wi-Fi setup.
+  static const char* const probes[] = {
+      "/generate_204", "/generate204", "/gen_204", "/hotspot-detect.html",
+      "/library/test/success.html", "/ncsi.txt", "/connecttest.txt",
+      "/canonical.html", "/success.txt", "/redirect",
+  };
+  for (const char* probe : probes) {
+    if (strcmp(req->uri, probe) == 0) {
+      httpd_resp_set_status(req, "302 Found");
+      httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
+      httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+      return httpd_resp_send(req, nullptr, 0);
+    }
+  }
+  // Anything else: the control panel, so a captive browser lands somewhere useful.
   return handle_index(req);
 }
 
