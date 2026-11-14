@@ -14,12 +14,16 @@
 extern "C" {
 #endif
 
-/* 7 fonts: Roboto Regular/Medium/Bold, 4 bpp, glyphs 0x20-0x7F,0xB0,0xA3,0x20AC,0x2013,0x2026,0x2191,0x2193 */
+/* 11 fonts: Roboto Regular/Medium/Bold, 4 bpp, glyphs 0x20-0x7F,0xB0,0xA3,0x20AC,0x2013,0x2026,0x2191,0x2193 */
 extern const lv_font_t font_roboto_14;          /* Roboto Regular 14 px */
 extern const lv_font_t font_roboto_16;          /* Roboto Regular 16 px */
+extern const lv_font_t font_roboto_18;          /* Roboto Regular 18 px */
 extern const lv_font_t font_roboto_20;          /* Roboto Regular 20 px */
+extern const lv_font_t font_roboto_medium_18;   /* Roboto Medium 18 px */
 extern const lv_font_t font_roboto_medium_20;   /* Roboto Medium 20 px */
+extern const lv_font_t font_roboto_medium_22;   /* Roboto Medium 22 px */
 extern const lv_font_t font_roboto_medium_28;   /* Roboto Medium 28 px */
+extern const lv_font_t font_roboto_bold_20;     /* Roboto Bold 20 px */
 extern const lv_font_t font_roboto_bold_48;     /* Roboto Bold 48 px */
 extern const lv_font_t font_roboto_bold_96;     /* Roboto Bold 96 px */
 

@@ -65,9 +65,13 @@ const GLYPH_RANGES = '0x20-0x7F,0xB0,0xA3,0x20AC,0x2013,0x2026,0x2191,0x2193';
 const FONT_SPECS = [
   { symbol: 'font_roboto_14', weight: 'Regular', size: 14 },
   { symbol: 'font_roboto_16', weight: 'Regular', size: 16 },
+  { symbol: 'font_roboto_18', weight: 'Regular', size: 18 },
   { symbol: 'font_roboto_20', weight: 'Regular', size: 20 },
+  { symbol: 'font_roboto_medium_18', weight: 'Medium', size: 18 },
   { symbol: 'font_roboto_medium_20', weight: 'Medium', size: 20 },
+  { symbol: 'font_roboto_medium_22', weight: 'Medium', size: 22 },
   { symbol: 'font_roboto_medium_28', weight: 'Medium', size: 28 },
+  { symbol: 'font_roboto_bold_20', weight: 'Bold', size: 20 },
   { symbol: 'font_roboto_bold_48', weight: 'Bold', size: 48 },
   { symbol: 'font_roboto_bold_96', weight: 'Bold', size: 96 },
 ];

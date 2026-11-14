@@ -34,14 +34,14 @@ int spark_max(const data::Quote& q) {
 void MarketScreen::build(lv_obj_t* root) {
   lv_obj_t* clock = nullptr;
   lv_obj_t* date = nullptr;
-  title_label_ = screens::header(root, title_, "5-DAY MARKET SNAPSHOT", &clock, &date);
-  subtitle_ = ui::label(root, &font_roboto_16, screens::kGrey, "", 30, 70);
+  title_label_ = screens::header(root, title_, "", &clock, &date);
+  subtitle_ = ui::label(root, &font_roboto_medium_20, screens::kGrey, "", 30, 68);
   screens::rule(root, 100);
 
-  ui::label(root, &font_roboto_16, screens::kGrey, "ASSET", 64, 114);
-  screens::right_text(root, &font_roboto_16, screens::kGrey, "LAST", 380, 230, 114);
-  screens::right_text(root, &font_roboto_16, screens::kGrey, "CHANGE", 630, 120, 114);
-  ui::label(root, &font_roboto_16, screens::kGrey, "5 DAYS", 790, 114);
+  ui::label(root, &font_roboto_bold_20, screens::kGrey, "ASSET", 64, 112);
+  screens::right_text(root, &font_roboto_bold_20, screens::kGrey, "LAST", 380, 230, 112);
+  screens::right_text(root, &font_roboto_bold_20, screens::kGrey, "CHANGE", 630, 120, 112);
+  ui::label(root, &font_roboto_bold_20, screens::kGrey, "5 DAYS", 790, 112);
 
   for (int i = 0; i < 5; i++) {
     int y = kRowY + i * kRowH;
@@ -49,7 +49,7 @@ void MarketScreen::build(lv_obj_t* root) {
 
     icon_[i] = ui::image(root, icon_get("trending-up", 24), 28, y + 22);
     name_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 64, y + 6);
-    symbol_[i] = ui::label(root, &font_roboto_16, screens::kGrey, "", 64, y + 32);
+    symbol_[i] = ui::label(root, &font_roboto_medium_18, screens::kGrey, "", 64, y + 30);
     price_[i] = ui::label(root, &font_roboto_bold_48, screens::kInk, "--", 380, y + 2);
     lv_obj_set_width(price_[i], 230);
     lv_obj_set_style_text_align(price_[i], LV_TEXT_ALIGN_RIGHT, 0);

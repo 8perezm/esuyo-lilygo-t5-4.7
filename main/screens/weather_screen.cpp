@@ -41,16 +41,16 @@ void WeatherScreen::build(lv_obj_t* root) {
 
   // Today, emphasised: a light card on the left third.
   ui::panel(root, 28, 112, 396, 372, screens::kCard);
-  ui::label(root, &font_roboto_16, screens::kFaint, "TODAY", 52, 122);
+  ui::label(root, &font_roboto_bold_20, screens::kGrey, "TODAY", 52, 120);
   icon_ = ui::image(root, icon_get("sun", 48), 52, 156);
   temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 118, 144);
   unit_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "C", 300, 208);
   cond_ = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52, 268);
-  feels_ = ui::label(root, &font_roboto_16, screens::kGrey, "FEELS --", 52, 298);
+  feels_ = ui::label(root, &font_roboto_medium_20, screens::kGrey, "FEELS --", 52, 298);
 
   static const char* labels[3] = {"WIND", "RAIN", "HUMIDITY"};
   for (int i = 0; i < 3; i++) {
-    ui::label(root, &font_roboto_16, screens::kGrey, labels[i], 52 + i * 118, 336);
+    ui::label(root, &font_roboto_bold_20, screens::kGrey, labels[i], 52 + i * 118, 336);
     stats_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52 + i * 118,
                          360);
   }
@@ -78,11 +78,11 @@ void WeatherScreen::build(lv_obj_t* root) {
     lv_obj_set_width(day_max_[i], 101);
     lv_obj_set_style_text_align(day_max_[i], LV_TEXT_ALIGN_CENTER, 0);
 
-    day_min_[i] = ui::label(root, &font_roboto_20, screens::kGrey, "--", x, 292);
+    day_min_[i] = ui::label(root, &font_roboto_medium_20, screens::kGrey, "--", x, 292);
     lv_obj_set_width(day_min_[i], 101);
     lv_obj_set_style_text_align(day_min_[i], LV_TEXT_ALIGN_CENTER, 0);
 
-    day_rain_[i] = ui::label(root, &font_roboto_16, screens::kGrey, "--", x, 340);
+    day_rain_[i] = ui::label(root, &font_roboto_medium_18, screens::kGrey, "--", x, 338);
     lv_obj_set_width(day_rain_[i], 101);
     lv_obj_set_style_text_align(day_rain_[i], LV_TEXT_ALIGN_CENTER, 0);
   }

@@ -12,7 +12,7 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
                  lv_obj_t** date) {
   lv_obj_t* title_label = ui::label(root, &font_roboto_bold_48, kInk, title, 28, 10);
   if (subtitle != nullptr && *subtitle != '\0') {
-    ui::label(root, &font_roboto_16, kGrey, subtitle, 30, 70);
+    ui::label(root, &font_roboto_medium_20, kGrey, subtitle, 30, 68);
   }
   if (clock != nullptr) {
     char buf[8] = "--:--";
@@ -25,7 +25,7 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
   if (date != nullptr) {
     char buf[16] = "";
     net::format_date(buf, sizeof(buf));
-    *date = ui::label(root, &font_roboto_16, kGrey, buf, 620, 54);
+    *date = ui::label(root, &font_roboto_medium_20, kGrey, buf, 620, 52);
     lv_obj_set_width(*date, 220);
     lv_obj_set_style_text_align(*date, LV_TEXT_ALIGN_RIGHT, 0);
   }
@@ -35,9 +35,9 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
 void rule(lv_obj_t* root, int y) { ui::panel(root, 28, y, 904, 2, kHairline); }
 
 void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated) {
-  ui::label(root, &font_roboto_16, kFaint, hint, 28, 502);
+  ui::label(root, &font_roboto_medium_18, kFaint, hint, 28, 500);
   if (updated != nullptr) {
-    *updated = ui::label(root, &font_roboto_16, kFaint, "", 620, 502);
+    *updated = ui::label(root, &font_roboto_medium_18, kFaint, "", 620, 500);
     lv_obj_set_width(*updated, 312);
     lv_obj_set_style_text_align(*updated, LV_TEXT_ALIGN_RIGHT, 0);
   }

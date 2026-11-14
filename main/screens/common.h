@@ -9,10 +9,10 @@
 namespace screens {
 
 constexpr uint32_t kInk = 0x171717;
-// E-paper is low contrast: anything lighter than this reads as "ghost".
-constexpr uint32_t kGrey = 0x333333;
-constexpr uint32_t kFaint = 0x4A4741;
-constexpr uint32_t kHairline = 0x8C877D;
+// E-paper is low contrast: light greys read as ghosts from arm's length.
+constexpr uint32_t kGrey = 0x1F1F1F;
+constexpr uint32_t kFaint = 0x2B2B2B;
+constexpr uint32_t kHairline = 0x7A756C;
 constexpr uint32_t kCard = 0xEBE8E1;
 
 // Page chrome shared by every dashboard. Returns the title label.
