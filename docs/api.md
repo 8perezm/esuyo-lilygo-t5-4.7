@@ -1,7 +1,8 @@
 # REST API
 
 All responses are JSON. No authentication: the panel is intended for a trusted LAN,
-and the setup AP is password protected.
+and the setup AP is password protected. Paths are available both on the setup AP
+(`192.168.4.1`) and on the board's LAN address.
 
 ## Status
 
@@ -10,8 +11,8 @@ and the setup AP is password protected.
 ```json
 {
   "fw": "1.0.0",
-  "heap": 184320,
-  "psram_free": 3145728,
+  "heap": 47251,
+  "psram_free": 2569400,
   "uptime_s": 42,
   "rssi": -57,
   "ip": "192.168.5.29",
@@ -22,7 +23,9 @@ and the setup AP is password protected.
 }
 ```
 
-`wifi_mode` is `sta` when connected and `ap+sta` while the setup AP is up.
+`heap` is **free internal RAM** (the scarce resource on this board), not total
+heap. `psram_free` is reported separately. `wifi_mode` is `sta` when connected and
+`ap+sta` while the setup AP is up.
 
 ## Settings
 
@@ -32,9 +35,7 @@ and the setup AP is password protected.
 {
   "wifi": { "ssid": "FOO", "configured": true },
   "weather": {
-    "cities": [
-      { "name": "Basingstoke", "lat": 51.2667, "lon": -1.0833 }
-    ],
+    "cities": [{ "name": "Basingstoke", "lat": 51.2667, "lon": -1.0833 }],
     "active": 0,
     "units": "c"
   },
@@ -47,28 +48,34 @@ and the setup AP is password protected.
 ```
 
 `PUT /api/settings` accepts the same shape. Lists are capped at 8 entries; latitude
-and longitude are required for a city. Changes are persisted in NVS and take effect
-on the next refresh (or immediately for units and the active city).
+and longitude are required per city. Changes persist in NVS and take effect on the
+next refresh (units and the active city apply immediately).
 
-Crypto ids may be CoinGecko slugs (`bitcoin`) or Yahoo tickers (`BTC-USD`); the
-provider maps the common slugs and treats a bare word as `<WORD>-USD`.
+`wifi.password` may be included in the PUT. If present and non-empty it is stored,
+and the device restarts after saving — this is what the panel's top **Save** button
+does when a password has been typed.
 
 ## Wi-Fi
 
 `GET /api/wifi/scan` → `{"networks":[{"ssid":"...","rssi":-60,"auth":4}]}`
 
 `POST /api/wifi` with `{"ssid":"...","password":"..."}` saves the credentials and
-restarts the board (the response is sent first).
+restarts the board (the response is sent first). The setup AP stays up until the
+station connection succeeds.
 
 `GET /api/geocode?q=Basingstoke` proxies Open-Meteo geocoding:
 `{"results":[{"name":"Basingstoke","country":"United Kingdom","admin1":"England","lat":51.2667,"lon":-1.0833}]}`
+
+**Captive portal:** `/generate_204`, `/hotspot-detect.html`, `/ncsi.txt` and
+similar probes return `302` to `http://192.168.4.1/`; any other unknown path serves
+the control panel.
 
 ## Screens
 
 `GET /api/screens` → `{"screens":[{"id":"weather","title":"Weather"}, ...]}`
 
 `POST /api/display` with `{"screen":"crypto"}` queues a screen change (rendered by
-the main loop, ~2.5 s).
+the main loop, ~4 s including the wipe).
 
 `POST /api/refresh` with an optional screen id refreshes the data.
 
@@ -79,3 +86,35 @@ the main loop, ~2.5 s).
 the boot partition and restarts. A rejected image returns HTTP 400.
 
 `POST /api/reboot` restarts without touching the slots.
+
+`POST /api/display/repair` performs a deep panel clear (3 × 300 ms) and redraw,
+about 20 s. Useful after long retention or an aborted draw.
+
+## Diagnostics
+
+`GET /api/gpio/live`
+
+```json
+{"pins":[
+  {"gpio":34,"level":1,"mv":3300,"presses":0,"age_ms":4294967295},
+  {"gpio":37,"level":0,"mv":941,"presses":0,"age_ms":4294967295}
+]}
+```
+
+`level` is the debounced level (1 = idle high), `mv` is the ADC value for the
+input-only pins (-1 otherwise), `presses` counts high→low transitions, and
+`age_ms` is the time since the last change (`4294967295` = never).
+
+`GET /api/gpio/events` returns the device-side ring buffer, newest first, so a slow
+client cannot miss a press:
+
+```json
+{"uptime_ms":298475,
+ "events":[{"ms":247523,"gpio":39,"level":1,"mv":3300},
+           {"ms":247262,"gpio":39,"level":0,"mv":0}]}
+```
+
+`POST /api/gpio/clear` empties that buffer.
+
+`GET /api/gpio/scan` blocks for five seconds, samples GPIO 12, 13, 14, 34, 35, 36
+and 39, and reports which pins changed — the older, simpler discovery method.

@@ -19,3 +19,4 @@ assets/icons/*.svg
 Thumbs.db
 __pycache__/
 *.pyc
+.playwright-mcp/

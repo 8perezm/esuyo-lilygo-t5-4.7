@@ -1,38 +1,55 @@
 # NOTES
 
-## Fixed: setup AP reboot loop on client connect
+Working notes, 2026-11-14. Long-form context lives in `docs/HANDOVER.md`.
 
-Joining the `T5-Dashboard` AP aborted the chip (`ESP_ERR_NO_MEM` from
-`esp_timer_create` in the Wi-Fi coexistence path) and rebooted it, so the panel
-flashed once per attempt. `display::init()` now uses `EPD_FEED_QUEUE_8`, which
-frees ~46 KB of internal RAM. Boot heap is logged by `report_heap()`.
+## State
 
-## Current blocker
+- Firmware builds and runs: panel updates, Wi-Fi joins (`FOO`), live weather and
+  markets, web panel at **192.168.5.29**, OTA and deep sleep work.
+- Three user buttons (35, 34, 39). RESET and BOOT are the other two switches; BOOT
+  is the panel strobe (`CFG_STR`) and is not readable at runtime.
+- Battery connector is JST-PH 2.0; a protected 2000 mAh cell has been chosen but
+  not fitted or calibrated yet.
 
-Panel updates only land once per boot with our epdiy display layer.
+## Fixed recently
 
-Evidence: LilyGo's own firmware on the same board updates repeatedly and draws
-clean greys (`PANEL TEST 3` observed). The panel hardware is therefore fine; the
-fault is in our display path (`main/display/display.cpp`).
+- Setup AP aborted on client association (`ESP_ERR_NO_MEM`) → epdiy
+  `EPD_FEED_QUEUE_8`, ~46 KB internal RAM recovered.
+- Boot fell back to AP after ~30 ms → Wi-Fi retries, storage in RAM only.
+- TLS failed with `MBEDTLS_ERR_MPI_ALLOC_FAILED` → mbedTLS heap moved to PSRAM.
+- Open-Meteo 400 → removed `time` from the `daily` list.
+- Yahoo 429 → browser User-Agent.
+- Weather could paint `NO DATA` after one transient failure → one retry, IPv4
+  pinned, SNTP wait before the first HTTPS request.
+- Market sparklines were always empty → `indicators.quote` is an array; index 0.
 
-The uncommitted direct-draw experiment currently returns
-`EPD_DRAW_LOOKUP_NOT_IMPLEMENTED (0x2)` from `epd_draw_base(..., MODE_GC16 |
-MODE_PACKING_2PPB, ...)`.
+## Next actions
 
-Immediate next attempt: restore the committed high-level path and force a
-full-area diff by zeroing `state.back_fb` before `epd_hl_update_screen()`.
+1. Decide: add BOOT as deep-sleep wake-only, and swap 34/39 so the rightmost button
+   advances.
+2. Fit the battery, compare `battery_mv` with a multimeter, adjust
+   `board::kBatteryDivider`.
+3. Refresh the clock label when SNTP completes after the boot window.
+4. Optional: cache the last weather snapshot in NVS for offline cold boots.
+5. Optional: partial refresh for faster page turns.
 
-Full context, measurements, commands and code map: **`docs/HANDOVER.md`**.
-
-## Build
+## Commands
 
 ```powershell
+cd C:\SERVER\REPOS\Esuyo\empty-14
 . .\scripts\env.ps1
 idf.py build
 idf.py -p COM12 -b 460800 flash
 .\scripts\capture.ps1 COM12 20
 ```
 
-Vendor reference firmware (proven good on this board):
-`C:\SERVER\REPOS\Esuyo\t5-owm-check`, build with `pio run -e t5-4_7`
-(not the default S3 env).
+After adding source files: `idf.py reconfigure` first (configure-time glob).
+
+## Docs
+
+- `docs/HANDOVER.md` — full state and history
+- `docs/architecture.md` — layers, rendering, memory
+- `docs/api.md` — REST endpoints
+- `docs/buttons.md` — physical map and discovery
+- `docs/battery.md` — cell requirements and runtime
+- `docs/troubleshooting.md` — symptoms and fixes

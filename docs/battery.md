@@ -1,0 +1,64 @@
+# Battery
+
+The board has a **JST-PH 2.0 mm, 2-pin** battery connector on the back, near the
+right-hand edge (next to the ESD sticker), and charges the cell over USB-C.
+
+## Requirements
+
+| Item | Value |
+|---|---|
+| Chemistry | 1S Li-ion / Li-Po, 3.7 V nominal, 4.2 V full |
+| Protection | **Must have a PCM/PCM board on the cell** — the T5 has no protection FETs |
+| Connector | JST-PH 2.0 mm (the 1.25 mm type is a different revision and will not fit) |
+| Capacity | 1000–2000 mAh fits the back; 2000 mAh is a good compromise |
+| Charger | HX6610S, fixed **500 mA**, 4.2 V cutoff, no temperature sensing |
+
+Charging a 2000 mAh pack therefore takes about 4–5 hours from empty.
+
+## Polarity — check before plugging in
+
+Both LilyGo and battery sellers warn that pre-crimped JST-PH plugs are frequently
+wired the **opposite way** to the board's footprint. Reversing it can destroy the
+charger or the cell.
+
+1. Read the `+` / `−` silkscreen next to the board's connector.
+2. Meter the battery leads and identify positive.
+3. If they disagree, release the two crimps from the housing and swap them.
+
+Never connect a JST pack and an 18650 holder at the same time.
+
+## A suitable cell
+
+EEMB **LP803465**, 3.7 V 2000 mAh 7.4 Wh, JST-PHR-02 (2 mm pitch), PCM built in,
+about 9.3 × 34.5 × 67 mm (Amazon ASIN `B09DPP44GM`, ~£9). It is 9.3 mm thick, so
+the board will not sit perfectly flush with the panel. A 5–7 mm pouch is a flatter
+alternative if thickness matters.
+
+## Firmware support
+
+- Voltage is read on **GPIO36** through a nominal **2:1** divider
+  (`board::kBatteryDivider`), on ADC1 channel 0.
+- The reading appears on the Status screen, in `/api/status` (`battery_mv`) and in
+  the web panel.
+- On USB with no cell the value floats around the charger rail (~4.36 V); with a
+  cell expect 3.7–4.2 V.
+- The ADC is uncalibrated. If a multimeter disagrees by more than ~100 mV, adjust
+  `kBatteryDivider` (measure, then `divider = measured_cell_mv / pin_mv`).
+- Deep sleep leaves the panel image in place; the timer wakes on `refresh_min`
+  (default 15 min) and any user button wakes immediately.
+
+## Runtime estimate
+
+Sleep current is quoted at ~170 µA for this board. Each wake costs roughly 15–25 s
+of Wi-Fi, TLS and a 1.5 s panel refresh, plus a 2.5 s wipe.
+
+| Capacity | 15 min refresh | 5 min refresh |
+|---|---|---|
+| 1000 mAh | ~2–3 weeks | ~1 week |
+| 2000 mAh | ~4–6 weeks | ~2 weeks |
+
+These are estimates from measured wake times, not a lab measurement. The first
+real battery should be characterised with the Status screen and a timer.
+
+![EEMB LP803465](images/eemb-803465.png)
+
