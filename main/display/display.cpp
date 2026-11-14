@@ -51,7 +51,9 @@ void clear() {
 void wipe() {
   int64_t start = esp_timer_get_time();
   epd_poweron();
-  epd_clear();
+  // Longer cycles than epd_clear()'s 3 x 12 ms: enough to lift the retention
+  // left by a previous firmware image, without costing 20 s on every boot.
+  epd_clear_area_cycles(epd_full_screen(), 3, 40);
   epd_poweroff();
   const size_t bytes = static_cast<size_t>(g_width) * g_height / 2;
   memset(g_hl.front_fb, 0xFF, bytes);

@@ -27,4 +27,13 @@ void place(lv_obj_t* obj, int x, int y);
 void resize(lv_obj_t* obj, int w, int h);
 void set_text(lv_obj_t* label, const char* text);
 
+// Coarse ASCII map of the canvas, for bring-up: '#' dark, '+' mid, '.' light.
+void dump();
+
+// Child list of the screen root with geometry, for bring-up.
+void dump_tree();
+
+// Ink counts inside the rectangles the weather screen expects, for bring-up.
+void probe();
+
 }  // namespace ui

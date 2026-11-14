@@ -9,10 +9,10 @@
 namespace screens {
 
 constexpr uint32_t kInk = 0x171717;
-constexpr uint32_t kGrey = 0x6B6B6B;
-constexpr uint32_t kFaint = 0xA8A29A;
-constexpr uint32_t kHairline = 0xDCD7CE;
-constexpr uint32_t kCard = 0xF4F2ED;
+constexpr uint32_t kGrey = 0x555555;
+constexpr uint32_t kFaint = 0x7A756C;
+constexpr uint32_t kHairline = 0xBFB9AE;
+constexpr uint32_t kCard = 0xEBE8E1;
 
 // Page chrome shared by every dashboard. Returns the title label.
 lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj_t** clock,
@@ -29,3 +29,4 @@ void format_price(char* out, size_t cap, float value, int decimals);
 void format_change(char* out, size_t cap, float pct);
 
 }  // namespace screens
+

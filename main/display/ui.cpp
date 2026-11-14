@@ -126,4 +126,61 @@ void set_text(lv_obj_t* obj, const char* text) {
   if (obj != nullptr) lv_label_set_text(obj, text != nullptr ? text : "");
 }
 
+void dump() {
+  if (g_canvas == nullptr) return;
+  char line[97];
+  for (int y = 0; y < board::kPanelHeight; y += 20) {
+    int i = 0;
+    for (int x = 0; x < board::kPanelWidth; x += 10) {
+      uint8_t v = g_canvas[y * board::kPanelWidth + x];
+      line[i++] = v < 64 ? '#' : (v < 160 ? '+' : (v < 240 ? '.' : ' '));
+    }
+    line[i] = '\0';
+    ESP_LOGI("canvas", "%s", line);
+  }
+}
+
+void dump_tree() {
+  if (g_root == nullptr) return;
+  uint32_t n = lv_obj_get_child_count(g_root);
+  ESP_LOGI("tree", "children=%u", static_cast<unsigned>(n));
+  for (uint32_t i = 0; i < n && i < 48; i++) {
+    lv_obj_t* c = lv_obj_get_child(g_root, i);
+    if (c == nullptr) continue;
+    ESP_LOGI("tree", "%u %s x=%d y=%d w=%d h=%d hid=%d opa=%d", static_cast<unsigned>(i),
+             lv_obj_check_type(c, &lv_label_class) ? "label" : "obj", static_cast<int>(lv_obj_get_x(c)),
+             static_cast<int>(lv_obj_get_y(c)), static_cast<int>(lv_obj_get_width(c)),
+             static_cast<int>(lv_obj_get_height(c)),
+             static_cast<int>(lv_obj_has_flag(c, LV_OBJ_FLAG_HIDDEN)),
+             static_cast<int>(lv_obj_get_style_opa(c, LV_PART_MAIN)));
+  }
+}
+
+void probe() {
+  if (g_canvas == nullptr) return;
+  struct Rect {
+    const char* name;
+    int x, y, w, h;
+  };
+  static const Rect rects[] = {
+      {"title", 28, 10, 270, 52},   {"subtitle", 30, 70, 127, 19},
+      {"rule", 28, 100, 904, 2},    {"today", 52, 124, 44, 16},
+      {"icon", 52, 156, 48, 48},    {"temp", 118, 144, 74, 102},
+      {"unit", 200, 208, 18, 30},   {"cond", 52, 268, 82, 22},
+      {"stats", 52, 338, 300, 42},  {"daylbl", 444, 128, 488, 24},
+      {"daymax", 444, 232, 488, 52}, {"footer", 28, 504, 211, 16},
+  };
+  for (const auto& r : rects) {
+    int dark = 0, ink = 0;
+    for (int y = r.y; y < r.y + r.h && y < board::kPanelHeight; y++) {
+      for (int x = r.x; x < r.x + r.w && x < board::kPanelWidth; x++) {
+        uint8_t v = g_canvas[y * board::kPanelWidth + x];
+        if (v < 128) dark++;
+        if (v < 245) ink++;
+      }
+    }
+    ESP_LOGI("probe", "%-8s dark=%-5d ink=%-5d", r.name, dark, ink);
+  }
+}
+
 }  // namespace ui

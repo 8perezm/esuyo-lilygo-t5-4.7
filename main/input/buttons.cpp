@@ -103,6 +103,10 @@ void begin() {
 
   g_queue = xQueueCreate(16, sizeof(Event));
   g_boot_tick = xTaskGetTickCount();
+  for (auto& s : g_state) {
+    ESP_LOGI(kTag, "gpio %d idle level %d", s.gpio,
+             gpio_get_level(static_cast<gpio_num_t>(s.gpio)));
+  }
   g_suppress_until_boot = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1;
   xTaskCreatePinnedToCore(task, "buttons", 3072, nullptr, 6, nullptr, 0);
 }
