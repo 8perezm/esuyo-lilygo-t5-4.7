@@ -7,6 +7,8 @@
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 
@@ -14,12 +16,28 @@ namespace {
 
 constexpr const char* kTag = "http";
 
+// Weather, markets and geocoding all fetch HTTPS from different tasks. The
+// certificate bundle is initialised on the first attach and is not reentrant,
+// so serialise the whole request. This also keeps two TLS sessions from
+// competing for the little internal RAM epdiy leaves behind.
+SemaphoreHandle_t g_fetch_lock = xSemaphoreCreateMutex();
+
+struct FetchLock {
+  FetchLock() {
+    if (g_fetch_lock != nullptr) xSemaphoreTake(g_fetch_lock, portMAX_DELAY);
+  }
+  ~FetchLock() {
+    if (g_fetch_lock != nullptr) xSemaphoreGive(g_fetch_lock);
+  }
+};
+
 }  // namespace
 
 namespace net {
 
 bool http_get(const std::string& url, std::string& out, int timeout_ms) {
   out.clear();
+  FetchLock lock;
 
   // Resolve up front so a DNS stall is visible in the log instead of looking
   // like a generic TLS timeout. The result also warms the lwIP DNS cache.
@@ -109,6 +127,34 @@ std::string url_encode(const char* text) {
       out.push_back(hex[c >> 4]);
       out.push_back(hex[c & 0x0F]);
     }
+  }
+  return out;
+}
+
+std::string url_decode(const char* text) {
+  auto hex_value = [](char c) -> int {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+  };
+
+  std::string out;
+  for (const char* p = text; p != nullptr && *p; ++p) {
+    if (*p == '+') {
+      out.push_back(' ');
+      continue;
+    }
+    if (*p == '%' && p[1] != '\0' && p[2] != '\0') {
+      const int high = hex_value(p[1]);
+      const int low = hex_value(p[2]);
+      if (high >= 0 && low >= 0) {
+        out.push_back(static_cast<char>((high << 4) | low));
+        p += 2;
+        continue;
+      }
+    }
+    out.push_back(*p);
   }
   return out;
 }
