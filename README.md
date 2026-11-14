@@ -5,6 +5,10 @@ A C++ dashboard firmware for the **LilyGo T5 4.7" e-paper** board (ESP32-WROVER-
 purpose-built UI: several dashboard screens, a 4 bpp greyscale renderer, physical
 button navigation, Wi-Fi setup without a cable, and a web control panel.
 
+> **Status:** the UI, network and API layers work; panel updates are still being
+> brought up. Read [`docs/HANDOVER.md`](docs/HANDOVER.md) before touching
+> `main/display/`.
+
 ## Screens
 
 | Screen | What | Keys |
