@@ -195,6 +195,7 @@ void WeatherScreen::cycle_city(int dir) {
   Settings& s = settings::get();
   if (s.city_count <= 0) return;
   s.city_index = (s.city_index + dir + s.city_count) % s.city_count;
+  settings::save();
   apply();
 }
 

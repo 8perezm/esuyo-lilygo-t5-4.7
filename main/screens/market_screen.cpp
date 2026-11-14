@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "app/settings.h"
+#include "app/ui_state.h"
 #include "data/quotes.h"
 #include "display/ui.h"
 #include "esp_log.h"
@@ -31,10 +32,50 @@ int spark_max(const data::Quote& q) {
 
 }  // namespace
 
+const char* MarketScreen::kind_label(Kind kind) {
+  switch (kind) {
+    case Kind::Crypto:
+      return "CRYPTO";
+    case Kind::Indices:
+      return "INDICES";
+    case Kind::Commodities:
+      return "COMMODITIES";
+  }
+  return "MARKETS";
+}
+
+const char* MarketScreen::kind_id(Kind kind) {
+  switch (kind) {
+    case Kind::Crypto:
+      return "crypto";
+    case Kind::Indices:
+      return "indices";
+    case Kind::Commodities:
+      return "commodities";
+  }
+  return "markets";
+}
+
+void MarketScreen::set_kind(Kind kind) {
+  if (kind == kind_) return;
+  kind_ = kind;
+  // Drop the previous market's quotes so a failed fetch cannot show BTC prices
+  // under the Indices title.
+  set_ = data::QuoteSet{};
+}
+
+void MarketScreen::on_action(int dir) {
+  if (dir == 0) return;
+  int next = (static_cast<int>(kind_) + (dir > 0 ? 1 : -1) + kKindCount) % kKindCount;
+  set_kind(static_cast<Kind>(next));
+  apply();
+  ui_state::set_market_kind(next);
+}
+
 void MarketScreen::build(lv_obj_t* root) {
   lv_obj_t* clock = nullptr;
   lv_obj_t* date = nullptr;
-  title_label_ = screens::header(root, title_, "", &clock, &date);
+  title_label_ = screens::header(root, kind_label(kind_), "", &clock, &date);
   subtitle_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "", 30, 64);
   screens::rule(root, 100);
 
@@ -63,7 +104,7 @@ void MarketScreen::build(lv_obj_t* root) {
     }
   }
 
-  screens::footer(root, "< SCREEN   REFRESH ON > ", &updated_);
+  screens::footer(root, "< SCREEN   MARKET >   HOLD > SLEEP", &updated_);
 }
 
 int MarketScreen::symbols(const char* out[], int max) {
@@ -89,7 +130,7 @@ bool MarketScreen::load() {
 
   data::QuoteSet fresh = set_;
   if (!quotes::fetch(list, n, fresh)) {
-    ESP_LOGW(kTag, "fetch failed for %s", id_);
+    ESP_LOGW(kTag, "fetch failed for %s", kind_id(kind_));
     apply();
     return false;
   }
@@ -148,7 +189,8 @@ void MarketScreen::apply() {
     }
   }
 
-  snprintf(buf, sizeof(buf), "5-DAY %s", set_.currency);
+  if (title_label_ != nullptr) ui::set_text(title_label_, kind_label(kind_));
+  snprintf(buf, sizeof(buf), "MARKETS / 5-DAY %s", set_.currency);
   ui::set_text(subtitle_, buf);
 
   if (updated_ != nullptr) {

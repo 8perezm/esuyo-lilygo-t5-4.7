@@ -6,6 +6,7 @@
 
 #include "app/power.h"
 #include "app/settings.h"
+#include "app/ui_state.h"
 #include "cJSON.h"
 #include "display/display.h"
 #include "display/ui.h"
@@ -32,12 +33,10 @@ namespace {
 constexpr const char* kTag = "app";
 
 WeatherScreen g_weather;
-MarketScreen g_crypto(MarketScreen::Kind::Crypto, "crypto", "CRYPTO");
-MarketScreen g_indices(MarketScreen::Kind::Indices, "indices", "INDICES");
-MarketScreen g_commodities(MarketScreen::Kind::Commodities, "commodities", "COMMODITIES");
+MarketScreen g_markets(MarketScreen::Kind::Crypto, "markets", "Markets");
 StatusScreen g_status;
 
-Screen* g_screens[] = {&g_weather, &g_crypto, &g_indices, &g_commodities, &g_status};
+Screen* g_screens[] = {&g_weather, &g_markets, &g_status};
 constexpr int kScreenCount = sizeof(g_screens) / sizeof(g_screens[0]);
 
 int g_current = 0;
@@ -47,6 +46,7 @@ int64_t g_last_refresh = 0;
 volatile bool g_pending_screen = false;
 volatile bool g_pending_refresh = false;
 volatile bool g_pending_repair = false;
+volatile int g_pending_market_kind = -1;
 char g_pending_id[24] = {};
 bool g_wifi_changed = false;
 
@@ -74,6 +74,7 @@ void show(int index, bool reload) {
   if (index < 0) index = kScreenCount - 1;
   if (index >= kScreenCount) index = 0;
   g_current = index;
+  ui_state::set_screen_id(g_screens[g_current]->id());
   ESP_LOGI(kTag, "screen %s", g_screens[g_current]->id());
   draw_current(reload, true);
 }
@@ -111,6 +112,13 @@ void run() {
   }
 
   settings::init();
+  ui_state::init();
+  // Return to the screen and market sub-screen the panel was left on. The
+  // show() below rebuilds it and loads fresh data.
+  const int saved_screen = find_screen(ui_state::screen_id());
+  g_current = saved_screen >= 0 ? saved_screen : 0;
+  g_markets.set_kind(static_cast<MarketScreen::Kind>(ui_state::market_kind()));
+
   ESP_ERROR_CHECK(display::init() ? ESP_OK : ESP_FAIL);
   report_heap("after display");
   if (!ui::begin()) {
@@ -162,6 +170,12 @@ void run() {
 
     if (g_pending_screen) {
       g_pending_screen = false;
+      const int market_kind = g_pending_market_kind;
+      g_pending_market_kind = -1;
+      if (market_kind >= 0 && market_kind < MarketScreen::kKindCount) {
+        g_markets.set_kind(static_cast<MarketScreen::Kind>(market_kind));
+        ui_state::set_market_kind(market_kind);
+      }
       int idx = find_screen(g_pending_id);
       if (idx >= 0) show(idx, true);
       g_last_activity = esp_timer_get_time();
@@ -208,6 +222,11 @@ void run() {
 
 const char* current_screen_id() { return g_screens[g_current]->id(); }
 
+const char* current_subscreen_id() {
+  if (g_screens[g_current] == &g_markets) return MarketScreen::kind_id(g_markets.kind());
+  return "";
+}
+
 int screen_count() { return kScreenCount; }
 
 const char* screen_id(int index) {
@@ -220,6 +239,22 @@ const char* screen_title(int index) {
 
 void request_screen(const char* id) {
   if (id == nullptr) return;
+
+  // Older links and the cached web panel still use the three market ids.
+  // Treat them as "Markets" plus the matching sub-screen.
+  int market_kind = -1;
+  if (strcmp(id, "crypto") == 0) {
+    market_kind = static_cast<int>(MarketScreen::Kind::Crypto);
+    id = "markets";
+  } else if (strcmp(id, "indices") == 0) {
+    market_kind = static_cast<int>(MarketScreen::Kind::Indices);
+    id = "markets";
+  } else if (strcmp(id, "commodities") == 0) {
+    market_kind = static_cast<int>(MarketScreen::Kind::Commodities);
+    id = "markets";
+  }
+
+  g_pending_market_kind = market_kind;
   strlcpy(g_pending_id, id, sizeof(g_pending_id));
   g_pending_screen = true;
 }

@@ -38,8 +38,10 @@ CKV 25, STH 26, CKH 5, latch 15, CFG_DATA 23, CFG_CLK 18, **CFG_STR 0**.
 - 4 bpp greyscale rendering through an LVGL 9 L8 canvas, Roboto (Medium/Bold) and
   Lucide icons; everything except the 48 px title and 96 px temperature is at least
   28 px.
-- Five screens, carousel navigation, weather city cycling, long-press refresh,
-  long-press sleep.
+- Three screens (Weather, Markets, Status), carousel navigation, weather city
+  cycling, markets sub-screen cycling, long-press refresh, long-press sleep.
+- The last screen, market sub-screen and weather city are persisted in NVS and
+  restored on boot; the restored screen then fetches fresh data.
 - Wi-Fi: STA with three association attempts, setup AP `T5-Dashboard`
   (`t5dashboard`), captive-portal redirects, NTP.
 - Web panel: status, screens, Wi-Fi scan/join, cities with geocoding search,
@@ -136,7 +138,7 @@ Reported by the owner and consistent with the event log:
 |---|---|---|---|
 | 0 | RESET | EN | Hardware reboot |
 | 1 | BOOT | 0 | None at runtime; shared with `CFG_STR` |
-| 2 | user | 35 | City on Weather, refresh elsewhere |
+| 2 | user | 35 | City on Weather, market type on Markets, refresh elsewhere |
 | 3 | user | 34 | Next screen; hold 1.2 s to sleep |
 | 4 | user | 39 | Previous screen; hold to refresh |
 
@@ -181,7 +183,7 @@ idf.py -p COM12 -b 460800 flash
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/status` | firmware, internal heap, PSRAM, uptime, RSSI, IP, screen, battery |
+| `GET /api/status` | firmware, internal heap, PSRAM, uptime, RSSI, IP, screen/sub-screen, battery |
 | `GET /api/gpio/live` | level, ADC mV, press count, age for each probed pin |
 | `GET /api/gpio/events` | ring buffer of level changes, newest first |
 | `POST /api/gpio/clear` | clear the ring buffer |

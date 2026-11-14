@@ -6,7 +6,7 @@
                     └───────┬────────────────────────────────────────┘
                             │ build / load / on_action
                     ┌───────▼────────┐
-                    │    Screen*     │  weather · market ×3 · status
+                    │    Screen*     │  weather · markets · status
                     └───────┬────────┘
              widgets into   │            data from
                     ┌───────▼────────┐  ┌──────────────────────────┐
@@ -28,7 +28,8 @@
   serialises settings to JSON and applies `PUT /api/settings`.
 - **screens** — each class owns LVGL widgets and one data structure. `build()` is
   called on every switch (widgets are destroyed by `ui::clear()`), `load()` fetches
-  and re-renders, `on_action()` handles the middle button.
+  and re-renders, `on_action()` handles the middle button (next city or market
+  sub-screen).
 - **display/ui** — `ui` renders into an L8 canvas in PSRAM and converts it to
   epdiy's 4 bpp framebuffer on flush. `display` is a thin epdiy wrapper (init,
   power, clear, wipe, refresh) and is the only code that includes `epdiy.h`.
@@ -54,6 +55,14 @@
 
 Nothing is drawn incrementally: every page turn is a full white frame plus a full
 GC16 update, which is what keeps the glass free of leftovers.
+
+## Screen state
+
+The last screen id and the Markets sub-screen are stored in the `ui` NVS
+namespace (`app/ui_state.*`); the active weather city lives in `Settings`. On
+boot the app restores them, then `show(..., true)` rebuilds that screen and
+fetches fresh data. A reboot therefore returns to the same view rather than the
+first screen. Changes made with the middle button are saved immediately.
 
 ## Data providers
 

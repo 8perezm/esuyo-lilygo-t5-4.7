@@ -15,10 +15,11 @@ a web control panel.
 | Screen | Contents |
 |---|---|
 | Weather | Today emphasised (current temp, condition, feels-like, wind, rain, humidity) plus four following days; the middle button cycles the configured cities |
-| Crypto | Five coins with price, change and a five-day sparkline |
-| Indices | S&P 500, Nasdaq, Dow, FTSE 100, DAX (configurable) |
-| Commodities | Gold, silver, natural gas, crude (configurable) |
+| Markets | One screen with three sub-screens selected by the middle button: Crypto (five coins with price, change and a five-day sparkline), Indices (S&P 500, Nasdaq, Dow, FTSE 100, DAX) and Commodities (gold, silver, natural gas, crude). All three lists are configurable |
 | Status | Network, IP, signal, battery, memory, uptime, firmware, panel, MAC |
+
+The last screen, market sub-screen and weather city are stored in NVS, so a reboot
+returns to the same view and fetches fresh data for it.
 
 ## Controls
 
@@ -28,7 +29,7 @@ Five switches sit above the panel. Left to right they are:
 |---|---|---|
 | 0 | **RESET** | Hardware reset |
 | 1 | **BOOT / IO0** | Flashing only — cannot be read while the panel is driven |
-| 2 | **GPIO 35** | Middle: cycles city on Weather, refreshes the current screen elsewhere |
+| 2 | **GPIO 35** | Middle: cycles city on Weather, Crypto/Indices/Commodities on Markets, refreshes elsewhere |
 | 3 | **GPIO 34** | Advances to the next screen; hold 1.2 s to sleep |
 | 4 | **GPIO 39** | Steps back a screen; hold to refresh |
 
@@ -84,9 +85,20 @@ main/
   input/       debounced buttons, live GPIO probe
   net/         Wi-Fi, HTTP server/client, serial console
   data/        Open-Meteo and Yahoo providers
-  screens/     weather, market ×3, status
+  screens/     weather, markets (3 sub-screens), status
   assets/      generated Roboto fonts and Lucide icons
   www/         embedded control panel
 scripts/       env, flash, capture, asset pipeline
 docs/          the documents above
 ```
+
+## Useful 
+
+https://github.com/Xinyuan-LilyGO/LilyGo-EPD47
+https://wiki.lilygo.cc/products/t5-series/t5-e-paper/quick-start.html
+
+# Printable case
+
+https://www.printables.com/model/272575-case-for-lilygo-t5-47-inch-e-paper
+https://www.thingiverse.com/thing:4890972
+https://www.thingiverse.com/thing:4749075

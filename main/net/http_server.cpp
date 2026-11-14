@@ -197,6 +197,7 @@ esp_err_t handle_status(httpd_req_t* req) {
   cJSON_AddStringToObject(root, "ip", net::wifi_ip());
   cJSON_AddStringToObject(root, "ssid", net::wifi_ssid());
   cJSON_AddStringToObject(root, "screen", app::current_screen_id());
+  cJSON_AddStringToObject(root, "subscreen", app::current_subscreen_id());
   cJSON_AddNumberToObject(root, "battery_mv", power::battery_mv());
   cJSON_AddStringToObject(root, "wifi_mode", net::ap_active() ? "ap+sta" : "sta");
 

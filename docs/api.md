@@ -18,6 +18,7 @@ and the setup AP is password protected. Paths are available both on the setup AP
   "ip": "192.168.5.29",
   "ssid": "FOO",
   "screen": "weather",
+  "subscreen": "",
   "battery_mv": 3980,
   "wifi_mode": "sta"
 }
@@ -25,7 +26,9 @@ and the setup AP is password protected. Paths are available both on the setup AP
 
 `heap` is **free internal RAM** (the scarce resource on this board), not total
 heap. `psram_free` is reported separately. `wifi_mode` is `sta` when connected and
-`ap+sta` while the setup AP is up.
+`ap+sta` while the setup AP is up. `subscreen` is `crypto`, `indices` or
+`commodities` while the Markets screen is showing; it is empty on the other
+screens.
 
 ## Settings
 
@@ -72,12 +75,19 @@ the control panel.
 
 ## Screens
 
-`GET /api/screens` → `{"screens":[{"id":"weather","title":"Weather"}, ...]}`
+`GET /api/screens` → `{"screens":[{"id":"weather","title":"Weather"},{"id":"markets","title":"Markets"},{"id":"status","title":"Status"}]}`
 
-`POST /api/display` with `{"screen":"crypto"}` queues a screen change (rendered by
-the main loop, ~4 s including the wipe).
+`POST /api/display` with `{"screen":"markets"}` queues a screen change (rendered by
+the main loop, ~4 s including the wipe). The Markets screen keeps its last
+sub-screen.
+
+The old market ids still work as shortcuts and select the matching sub-screen:
+`{"screen":"crypto"}`, `{"screen":"indices"}`, `{"screen":"commodities"}`.
 
 `POST /api/refresh` with an optional screen id refreshes the data.
+
+The last screen, market sub-screen and weather city are saved in NVS. After a
+reboot (or a timer wake) the panel restores that view and fetches fresh data.
 
 ## Firmware
 

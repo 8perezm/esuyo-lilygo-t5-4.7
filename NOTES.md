@@ -28,6 +28,9 @@ Working notes, 2026-11-14. Long-form context lives in `docs/HANDOVER.md`.
 - Weather could paint `NO DATA` after one transient failure → one retry, IPv4
   pinned, SNTP wait before the first HTTPS request.
 - Market sparklines were always empty → `indicators.quote` is an array; index 0.
+- Markets is now one screen (Crypto/Indices/Commodities sub-screens, middle button
+  cycles them). The last screen, market sub-screen and weather city are persisted
+  in NVS and restored, then refreshed, on every boot.
 
 ## Next actions
 
