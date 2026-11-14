@@ -10,6 +10,7 @@ namespace {
 constexpr const char* kTag = "display";
 
 EpdiyHighlevelState g_hl;
+bool g_powered = false;
 uint8_t* g_fb = nullptr;
 int g_width = 0;
 int g_height = 0;
@@ -37,8 +38,19 @@ bool init() {
   return true;
 }
 
-void power_on() { epd_poweron(); }
-void power_off() { epd_poweroff(); }
+void power_on() {
+  if (!g_powered) {
+    epd_poweron();
+    g_powered = true;
+  }
+}
+
+void power_off() {
+  if (g_powered) {
+    epd_poweroff();
+    g_powered = false;
+  }
+}
 
 uint8_t* fb() { return g_fb; }
 int width() { return g_width; }
@@ -50,11 +62,10 @@ void clear() {
 
 void wipe() {
   int64_t start = esp_timer_get_time();
-  epd_poweron();
+  power_on();
   // Longer cycles than epd_clear()'s 3 x 12 ms: enough to lift the retention
   // left by a previous firmware image, without costing 20 s on every boot.
   epd_clear_area_cycles(epd_full_screen(), 3, 40);
-  epd_poweroff();
   const size_t bytes = static_cast<size_t>(g_width) * g_height / 2;
   memset(g_hl.front_fb, 0xFF, bytes);
   memset(g_hl.back_fb, 0xFF, bytes);
@@ -64,9 +75,8 @@ void wipe() {
 
 void repair() {
   int64_t start = esp_timer_get_time();
-  epd_poweron();
+  power_on();
   epd_clear_area_cycles(epd_full_screen(), 3, 300);
-  epd_poweroff();
   const size_t bytes = static_cast<size_t>(g_width) * g_height / 2;
   memset(g_hl.front_fb, 0xFF, bytes);
   memset(g_hl.back_fb, 0xFF, bytes);
@@ -78,10 +88,9 @@ void refresh(enum EpdDrawMode mode) {
   int temp = epd_ambient_temperature();
   if (temp <= 0 || temp > 60) temp = 22;
 
-  epd_poweron();
+  power_on();
   int64_t start = esp_timer_get_time();
   enum EpdDrawError err = epd_hl_update_screen(&g_hl, mode, temp);
-  epd_poweroff();
 
   if (err != EPD_DRAW_SUCCESS) {
     ESP_LOGE(kTag, "draw error 0x%X", err);
@@ -91,3 +100,4 @@ void refresh(enum EpdDrawMode mode) {
 }
 
 }  // namespace display
+
