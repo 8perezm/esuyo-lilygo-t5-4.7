@@ -21,7 +21,7 @@ If a revision (or a mod) exposes more than three, do not guess the pins. With th
 board on the network:
 
 ```bash
-curl http://t5-dashboard.local/api/gpio/scan
+curl http://192.168.4.1/api/gpio/scan   # or the panel's LAN address
 ```
 
 The request blocks for five seconds while sampling GPIO 12, 13, 14, 34, 35, 36 and

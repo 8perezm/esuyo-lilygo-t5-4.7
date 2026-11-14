@@ -43,6 +43,7 @@ int64_t g_last_refresh = 0;
 
 volatile bool g_pending_screen = false;
 volatile bool g_pending_refresh = false;
+volatile bool g_pending_repair = false;
 char g_pending_id[24] = {};
 
 int find_screen(const char* id) {
@@ -52,7 +53,10 @@ int find_screen(const char* id) {
   return -1;
 }
 
-void draw_current(bool reload) {
+void draw_current(bool reload, bool wipe_first) {
+  // A page turn starts from a known-white panel: a diff against the previous
+  // screen would otherwise leave every pixel the new screen does not touch.
+  if (wipe_first) display::wipe();
   ui::clear();
   Screen* s = g_screens[g_current];
   s->build(ui::root());
@@ -67,7 +71,7 @@ void show(int index, bool reload) {
   if (index >= kScreenCount) index = 0;
   g_current = index;
   ESP_LOGI(kTag, "screen %s", g_screens[g_current]->id());
-  draw_current(reload);
+  draw_current(reload, true);
 }
 
 void refresh_active() {
@@ -107,13 +111,6 @@ void run() {
   if (online) net::time_sync_start();
   server::start();
 
-  // The high-level buffer starts white, but the glass may still show whatever
-  // the last boot (or the previous firmware) left on it. Diffing against a
-  // blank buffer would only add ink, so wipe once before the first frame.
-  // This runs after the network allocations so it cannot fragment the heap
-  // they need.
-  display::wipe();
-
   const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
   ESP_LOGW(kTag, "boot: wake cause %d, wifi %s", cause, online ? "up" : "setup AP");
 
@@ -129,6 +126,13 @@ void run() {
   const int refresh_s = (settings::get().refresh_min > 0 ? settings::get().refresh_min : 15) * 60;
 
   for (;;) {
+    if (g_pending_repair) {
+      g_pending_repair = false;
+      display::repair();
+      draw_current(true, false);
+      g_last_activity = esp_timer_get_time();
+    }
+
     if (g_pending_screen) {
       g_pending_screen = false;
       int idx = find_screen(g_pending_id);
@@ -194,6 +198,8 @@ void request_screen(const char* id) {
 }
 
 void request_refresh() { g_pending_refresh = true; }
+
+void request_repair() { g_pending_repair = true; }
 
 void settings_to_json(char* out, size_t cap) {
   Settings& s = settings::get();
@@ -325,3 +331,4 @@ bool apply_settings_json(const char* json, size_t len) {
 void reboot() { esp_restart(); }
 
 }  // namespace app
+

@@ -17,10 +17,12 @@ int width();
 int height();
 
 void clear();
-// Drive the whole panel to white. Needed after a cold boot or a deep-sleep
-// wake: the panel may still hold an image (or another firmware's image), while
-// the freshly allocated high-level state believes it is blank.
+// Drive the whole panel to white and reset both high-level buffers to match,
+// so the next frame is diffed against what is actually on the glass. Needed on
+// every screen change and after a cold boot.
 void wipe();
+// Stronger (slow) clear for image retention left by an older firmware.
+void repair();
 void refresh(enum EpdDrawMode mode = MODE_GC16);
 
 }  // namespace display

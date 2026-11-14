@@ -50,9 +50,8 @@ Panel:    http://192.168.4.1/
 ```
 
 Pick your network there, save, and the board restarts on it. Afterwards the panel is
-served on the LAN at `http://t5-dashboard.local/` (or the address shown on the Status
-screen). If the credentials stop working, the board falls back to the setup AP
-automatically.
+served on the LAN at the address shown on the Status screen (the setup AP stays
+available as a fallback if the credentials stop working).
 
 Everything the UI exposes is also a small REST API; see `docs/api.md`. Firmware can
 be uploaded from the panel (Firmware → choose `.bin`), so the cable is only needed

@@ -53,7 +53,22 @@ void wipe() {
   epd_poweron();
   epd_clear();
   epd_poweroff();
+  const size_t bytes = static_cast<size_t>(g_width) * g_height / 2;
+  memset(g_hl.front_fb, 0xFF, bytes);
+  memset(g_hl.back_fb, 0xFF, bytes);
   ESP_LOGI(kTag, "panel wiped in %d ms",
+           static_cast<int>((esp_timer_get_time() - start) / 1000));
+}
+
+void repair() {
+  int64_t start = esp_timer_get_time();
+  epd_poweron();
+  epd_clear_area_cycles(epd_full_screen(), 3, 300);
+  epd_poweroff();
+  const size_t bytes = static_cast<size_t>(g_width) * g_height / 2;
+  memset(g_hl.front_fb, 0xFF, bytes);
+  memset(g_hl.back_fb, 0xFF, bytes);
+  ESP_LOGW(kTag, "panel repair in %d ms",
            static_cast<int>((esp_timer_get_time() - start) / 1000));
 }
 

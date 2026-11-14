@@ -297,6 +297,11 @@ esp_err_t handle_reboot(httpd_req_t* req) {
   return err;
 }
 
+esp_err_t handle_repair(httpd_req_t* req) {
+  app::request_repair();
+  return send_ok(req);
+}
+
 // Button discovery: sample every free candidate pin for five seconds while the
 // user presses the physical buttons, and report which pins changed. This is how
 // a board revision with extra buttons gets mapped without guessing.
@@ -383,6 +388,8 @@ void start() {
       {"/api/geocode", HTTP_GET, handle_geocode, nullptr},
       {"/api/ota", HTTP_POST, handle_ota, nullptr},
       {"/api/reboot", HTTP_POST, handle_reboot, nullptr},
+      {"/api/display/repair", HTTP_GET, handle_repair, nullptr},
+      {"/api/display/repair", HTTP_POST, handle_repair, nullptr},
       {"/api/gpio/scan", HTTP_GET, handle_gpio_scan, nullptr},
       {"/*", HTTP_GET, handle_catch_all, nullptr},
   };
