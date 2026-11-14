@@ -103,7 +103,11 @@ bool fetch(const char* const* symbols, int count, data::QuoteSet& out) {
     q.price = static_cast<float>(number(meta, "regularMarketPrice"));
     q.change_pct = static_cast<float>(number(meta, "regularMarketChangePercent", NAN));
 
-    const cJSON* closes = item(item(item(result, "indicators"), "quote"), "close");
+    // indicators.quote is an array of one object; asking it for "close" by key
+    // returns null, which is why the sparklines were always empty.
+    const cJSON* quote0 =
+        cJSON_GetArrayItem(item(item(result, "indicators"), "quote"), 0);
+    const cJSON* closes = item(quote0, "close");
     for (int k = 0; k < cJSON_GetArraySize(closes) && q.spark_count < 5; k++) {
       const cJSON* c = cJSON_GetArrayItem(closes, k);
       if (!cJSON_IsNumber(c)) continue;

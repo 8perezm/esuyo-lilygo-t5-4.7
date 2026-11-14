@@ -41,7 +41,7 @@ void MarketScreen::build(lv_obj_t* root) {
   ui::label(root, &font_roboto_bold_28, screens::kGrey, "ASSET", 64, 106);
   screens::right_text(root, &font_roboto_bold_28, screens::kGrey, "LAST", 380, 230, 106);
   screens::right_text(root, &font_roboto_bold_28, screens::kGrey, "CHANGE", 620, 130, 106);
-  ui::label(root, &font_roboto_bold_28, screens::kGrey, "5 DAYS", 730, 106);
+  
 
   for (int i = 0; i < 5; i++) {
     int y = kRowY + i * kRowH;

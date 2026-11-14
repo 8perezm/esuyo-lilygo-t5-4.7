@@ -64,32 +64,32 @@ void WeatherScreen::build(lv_obj_t* root) {
   // Four following days. Stop at x=856: the top-right of the glass is
   // covered by the connector tab, so text must not run under it.
   for (int i = 0; i < 4; i++) {
-    int x = 436 + i * 105;
-    ui::panel(root, x, 112, 101, 372, 0xFFFFFF);
+    int x = 436 + i * 126;
+    ui::panel(root, x, 112, 118, 372, 0xFFFFFF);
     lv_obj_t* border = lv_obj_create(root);
     lv_obj_remove_style_all(border);
     lv_obj_set_pos(border, x, 112);
-    lv_obj_set_size(border, 101, 372);
+    lv_obj_set_size(border, 118, 372);
     lv_obj_set_style_border_width(border, 1, 0);
     lv_obj_set_style_border_color(border, lv_color_hex(screens::kHairline), 0);
     lv_obj_clear_flag(border, LV_OBJ_FLAG_SCROLLABLE);
 
     day_label_[i] = ui::label(root, &font_roboto_bold_28, screens::kInk, "--", x, 122);
-    lv_obj_set_width(day_label_[i], 101);
+    lv_obj_set_width(day_label_[i], 118);
     lv_obj_set_style_text_align(day_label_[i], LV_TEXT_ALIGN_CENTER, 0);
 
-    day_icon_[i] = ui::image(root, nullptr, x + 26, 168);
+    day_icon_[i] = ui::image(root, nullptr, x + 35, 168);
 
     day_max_[i] = ui::label(root, &font_roboto_bold_48, screens::kInk, "--", x, 232);
-    lv_obj_set_width(day_max_[i], 101);
+    lv_obj_set_width(day_max_[i], 118);
     lv_obj_set_style_text_align(day_max_[i], LV_TEXT_ALIGN_CENTER, 0);
 
     day_min_[i] = ui::label(root, &font_roboto_medium_28, screens::kGrey, "--", x, 288);
-    lv_obj_set_width(day_min_[i], 101);
+    lv_obj_set_width(day_min_[i], 118);
     lv_obj_set_style_text_align(day_min_[i], LV_TEXT_ALIGN_CENTER, 0);
 
     day_rain_[i] = ui::label(root, &font_roboto_medium_28, screens::kGrey, "--", x, 334);
-    lv_obj_set_width(day_rain_[i], 101);
+    lv_obj_set_width(day_rain_[i], 118);
     lv_obj_set_style_text_align(day_rain_[i], LV_TEXT_ALIGN_CENTER, 0);
   }
 

@@ -19,14 +19,14 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
     net::format_clock(buf, sizeof(buf));
     // Keep clear of the connector tab at the top right of the glass.
     *clock = ui::label(root, &font_roboto_medium_28, kInk, buf, 560, 16);
-    lv_obj_set_width(*clock, 280);
+    lv_obj_set_width(*clock, 372);
     lv_obj_set_style_text_align(*clock, LV_TEXT_ALIGN_RIGHT, 0);
   }
   if (date != nullptr) {
     char buf[16] = "";
     net::format_date(buf, sizeof(buf));
-    *date = ui::label(root, &font_roboto_medium_28, kGrey, buf, 540, 48);
-    lv_obj_set_width(*date, 300);
+    *date = ui::label(root, &font_roboto_medium_28, kGrey, buf, 560, 48);
+    lv_obj_set_width(*date, 372);
     lv_obj_set_style_text_align(*date, LV_TEXT_ALIGN_RIGHT, 0);
   }
   return title_label;
