@@ -21,11 +21,37 @@ Both LilyGo and battery sellers warn that pre-crimped JST-PH plugs are frequentl
 wired the **opposite way** to the board's footprint. Reversing it can destroy the
 charger or the cell.
 
-1. Read the `+` / `−` silkscreen next to the board's connector.
-2. Meter the battery leads and identify positive.
-3. If they disagree, release the two crimps from the housing and swap them.
+**There is no usable `+` / `−` silkscreen next to the JST connector on this board**
+(the `+` / `−` near the bottom-right of the PCB belong to the 18650 holder
+footprint). Measure it instead — it takes about a minute.
 
-Never connect a JST pack and an 18650 holder at the same time.
+### Identify the board's negative pin (unpowered)
+
+1. Unplug USB and any battery.
+2. Meter in **continuity / resistance** mode.
+3. Clip one probe to a known ground: the **GND pin of a 3-pin header** on the top
+   edge (silkscreened `VCC / IOxx / GND`), or the USB-C shell.
+4. Touch each of the two JST pins in turn. The pin that reads **≈ 0 Ω / beeps** is
+   **negative (GND)**; the other pin is **VBAT positive**.
+
+### Confirm with voltage (optional)
+
+Plug in USB only and put the meter on **DC volts**, probing across the two pins.
+Expect roughly **4.1–4.3 V**, with the non-ground pin positive. Some chargers only
+regulate once a cell is present, so a 0 V reading does not invalidate the
+continuity result.
+
+### Match the battery to it
+
+The pack's leads are almost always **red = +, black = −**, but verify with the
+meter. If red lands on the board's ground pin, release the two crimps from the JST
+housing with a pin and swap them — never plug it in reversed.
+
+Record the orientation once known (paint pen or nail polish on the housing) so the
+check does not have to be repeated.
+
+**Cautions:** never use resistance/continuity mode while USB is connected, and never
+connect a JST pack and an 18650 holder at the same time.
 
 ## A suitable cell
 
