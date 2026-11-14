@@ -107,6 +107,10 @@ sleep. Temperature is clamped to the waveform's 20–30 °C range by epdiy.
   **external (PSRAM) allocation** in `sdkconfig.defaults`.
 - Wi-Fi runs with `CONFIG_ESP_WIFI_IRAM_OPT=n`, `RX_IRAM_OPT=n`, static RX 10,
   dynamic RX 16, static TX 10, httpd stack 5120, three sockets.
+- City geocoding is the only HTTPS route driven by the web panel. Its TLS call
+  runs on a lazy 8 KB `geocode` task, created on the first search, because the
+  httpd task stack cannot host mbedTLS. That is ~8 KB of internal RAM while the
+  worker exists (it is never deleted; a reboot frees it).
 - Boot currently reports roughly **45–48 KB internal free, ~40 KB largest block**
   after the server starts (`app: heap after server`). Watch those numbers.
 

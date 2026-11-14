@@ -16,6 +16,9 @@
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "input/gpio_probe.h"
 #include "net/http_client.h"
 #include "net/wifi.h"
@@ -24,6 +27,78 @@ namespace {
 
 constexpr const char* kTag = "http";
 constexpr size_t kMaxBody = 32768;
+
+// Geocoding is the only route that performs HTTPS from the control panel, and
+// mbedTLS needs far more stack than the 5 KB the httpd worker gets on this
+// board. Running it there overflowed the httpd stack and rebooted the panel as
+// soon as Add city searched. One small background worker keeps the TLS session
+// off the HTTP server task; the handler waits for its reply.
+constexpr UBaseType_t kGeocodeTaskStack = 8192;
+constexpr uint32_t kGeocodeWaitMs = 25000;
+
+SemaphoreHandle_t g_geocode_mutex = nullptr;
+SemaphoreHandle_t g_geocode_request = nullptr;
+SemaphoreHandle_t g_geocode_done = nullptr;
+std::string g_geocode_query;
+std::string g_geocode_body;
+bool g_geocode_ok = false;
+bool g_geocode_started = false;
+uint32_t g_geocode_job = 0;
+uint32_t g_geocode_finished = 0;
+
+void geocode_task(void*) {
+  for (;;) {
+    if (xSemaphoreTake(g_geocode_request, portMAX_DELAY) != pdTRUE) continue;
+
+    std::string query;
+    uint32_t job = 0;
+    xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
+    query.swap(g_geocode_query);
+    job = g_geocode_job;
+    xSemaphoreGive(g_geocode_mutex);
+
+    std::string url =
+        "https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name=";
+    url += net::url_encode(query.c_str());
+
+    std::string body;
+    const int64_t start = esp_timer_get_time();
+    bool ok = net::http_get(url, body);
+    ESP_LOGI(kTag, "geocode '%s' %s in %d ms, stack free %u", query.c_str(),
+             ok ? "ok" : "failed", static_cast<int>((esp_timer_get_time() - start) / 1000),
+             static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
+    if (!ok) ESP_LOGW(kTag, "geocode lookup failed for '%s'", query.c_str());
+
+    xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
+    g_geocode_body.swap(body);
+    g_geocode_ok = ok;
+    g_geocode_finished = job;
+    xSemaphoreGive(g_geocode_mutex);
+    xSemaphoreGive(g_geocode_done);
+  }
+}
+
+bool geocode_start() {
+  if (g_geocode_started) return true;
+
+  g_geocode_mutex = xSemaphoreCreateMutex();
+  g_geocode_request = xSemaphoreCreateBinary();
+  g_geocode_done = xSemaphoreCreateBinary();
+  if (g_geocode_mutex == nullptr || g_geocode_request == nullptr ||
+      g_geocode_done == nullptr ||
+      xTaskCreate(geocode_task, "geocode", kGeocodeTaskStack, nullptr, 4, nullptr) != pdPASS) {
+    ESP_LOGE(kTag, "geocode: no memory for worker");
+    if (g_geocode_mutex != nullptr) vSemaphoreDelete(g_geocode_mutex);
+    if (g_geocode_request != nullptr) vSemaphoreDelete(g_geocode_request);
+    if (g_geocode_done != nullptr) vSemaphoreDelete(g_geocode_done);
+    g_geocode_mutex = nullptr;
+    g_geocode_request = nullptr;
+    g_geocode_done = nullptr;
+    return false;
+  }
+  g_geocode_started = true;
+  return true;
+}
 
 // One line per request: the first thing to look at when the panel "does not
 // save" or a browser cannot reach a route.
@@ -244,14 +319,48 @@ esp_err_t handle_geocode(httpd_req_t* req) {
       httpd_query_key_value(query, "q", value, sizeof(value)) != ESP_OK) {
     return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "q required");
   }
+  if (!geocode_start()) {
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "no memory");
+  }
 
-  std::string url = "https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name=";
-  url += net::url_encode(value);
+  // The query string arrives still percent-encoded; decode it here so the
+  // upstream encoder does not turn "New York" into "New%20York" twice.
+  const std::string decoded = net::url_decode(value);
+
+  // The HTTP server has a single worker, so only one lookup is in flight.
+  xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
+  g_geocode_query.assign(decoded);
+  const uint32_t job = ++g_geocode_job;
+  xSemaphoreGive(g_geocode_mutex);
+  xSemaphoreGive(g_geocode_request);
 
   std::string body;
-  if (!net::http_get(url, body)) return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "lookup failed");
+  bool ok = false;
+  // A completion from an earlier timed-out lookup may arrive first; keep
+  // waiting until the worker reports this job.
+  for (;;) {
+    if (xSemaphoreTake(g_geocode_done, pdMS_TO_TICKS(kGeocodeWaitMs)) != pdTRUE) {
+      ESP_LOGW(kTag, "geocode timeout for '%s'", decoded.c_str());
+      return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "lookup timed out");
+    }
+    xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
+    const bool mine = g_geocode_finished == job;
+    if (mine) {
+      body.swap(g_geocode_body);
+      ok = g_geocode_ok;
+      g_geocode_ok = false;
+    }
+    xSemaphoreGive(g_geocode_mutex);
+    if (mine) break;
+  }
+  if (!ok) {
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "lookup failed");
+  }
 
   cJSON* parsed = cJSON_Parse(body.c_str());
+  if (parsed == nullptr) {
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "bad upstream response");
+  }
   cJSON* root = cJSON_CreateObject();
   cJSON* results = cJSON_AddArrayToObject(root, "results");
   const cJSON* list = cJSON_GetObjectItemCaseSensitive(parsed, "results");

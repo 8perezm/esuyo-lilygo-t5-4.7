@@ -13,6 +13,12 @@ Working notes, 2026-11-14. Long-form context lives in `docs/HANDOVER.md`.
 
 ## Fixed recently
 
+- Add city search rebooted the board: `/api/geocode` ran mbedTLS on the 5 KB
+  httpd task and overflowed its stack. It now runs on a dedicated 8 KB worker
+  task, so the HTTP handler never touches TLS.
+- Add city with a space in the name looked up the literal `%20` because the
+  httpd query value is not decoded; `net::url_decode` now runs before the
+  upstream encoder.
 - Setup AP aborted on client association (`ESP_ERR_NO_MEM`) → epdiy
   `EPD_FEED_QUEUE_8`, ~46 KB internal RAM recovered.
 - Boot fell back to AP after ~30 ms → Wi-Fi retries, storage in RAM only.

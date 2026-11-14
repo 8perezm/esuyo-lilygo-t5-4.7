@@ -3,6 +3,22 @@
 Commands assume the board is at `192.168.5.29`; substitute the address shown in
 `/api/status` or the boot log.
 
+## Add city search reboots the board
+
+Fixed in the current firmware. `/api/geocode` used to perform the Open-Meteo
+HTTPS lookup on the httpd task, whose 5 KB stack is smaller than mbedTLS needs.
+The serial log showed:
+
+```
+***ERROR*** A stack overflow in task httpd has been detected.
+```
+
+The lookup now runs on a dedicated 8 KB `geocode` worker, and the HTTP handler
+only waits for its result. If searches fail again, look for
+`geocode: no memory for worker` in the serial log: it means internal RAM is too
+fragmented to start the task, so reboot and check the heap numbers in
+`/api/status`.
+
 ## The panel shows NO DATA
 
 1. `GET /api/status` — check `ssid`, `ip`, `rssi`.
