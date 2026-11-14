@@ -35,26 +35,26 @@ void MarketScreen::build(lv_obj_t* root) {
   lv_obj_t* clock = nullptr;
   lv_obj_t* date = nullptr;
   title_label_ = screens::header(root, title_, "", &clock, &date);
-  subtitle_ = ui::label(root, &font_roboto_medium_24, screens::kGrey, "", 30, 66);
+  subtitle_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "", 30, 64);
   screens::rule(root, 100);
 
-  ui::label(root, &font_roboto_bold_24, screens::kGrey, "ASSET", 64, 110);
-  screens::right_text(root, &font_roboto_bold_24, screens::kGrey, "LAST", 380, 230, 110);
-  screens::right_text(root, &font_roboto_bold_24, screens::kGrey, "CHANGE", 620, 130, 110);
-  ui::label(root, &font_roboto_bold_24, screens::kGrey, "5 DAYS", 766, 110);
+  ui::label(root, &font_roboto_bold_28, screens::kGrey, "ASSET", 64, 106);
+  screens::right_text(root, &font_roboto_bold_28, screens::kGrey, "LAST", 380, 230, 106);
+  screens::right_text(root, &font_roboto_bold_28, screens::kGrey, "CHANGE", 620, 130, 106);
+  ui::label(root, &font_roboto_bold_28, screens::kGrey, "5 DAYS", 730, 106);
 
   for (int i = 0; i < 5; i++) {
     int y = kRowY + i * kRowH;
     if (i > 0) ui::panel(root, 28, y - 12, 904, 1, screens::kHairline);
 
     icon_[i] = ui::image(root, icon_get("trending-up", 24), 28, y + 22);
-    name_[i] = ui::label(root, &font_roboto_medium_24, screens::kInk, "--", 64, y + 4);
-    symbol_[i] = ui::label(root, &font_roboto_medium_20, screens::kGrey, "", 64, y + 34);
+    name_[i] = ui::label(root, &font_roboto_medium_28, screens::kInk, "--", 64, y + 20);
+    symbol_[i] = nullptr;  // no room for a second 28 px line in a 70 px row
     price_[i] = ui::label(root, &font_roboto_bold_48, screens::kInk, "--", 380, y + 2);
     lv_obj_set_width(price_[i], 230);
     lv_obj_set_style_text_align(price_[i], LV_TEXT_ALIGN_RIGHT, 0);
 
-    change_[i] = ui::label(root, &font_roboto_medium_24, screens::kInk, "--", 620, y + 18);
+    change_[i] = ui::label(root, &font_roboto_medium_28, screens::kInk, "--", 620, y + 18);
     lv_obj_set_width(change_[i], 120);
     lv_obj_set_style_text_align(change_[i], LV_TEXT_ALIGN_RIGHT, 0);
 
