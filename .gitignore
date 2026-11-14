@@ -1,0 +1,21 @@
+# ESP-IDF build output
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+
+# Host-side asset tooling
+node_modules/
+package-lock.json
+assets/fonts/*.ttf
+assets/icons/*.svg
+.cache/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc

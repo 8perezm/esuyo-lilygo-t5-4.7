@@ -1,0 +1,15 @@
+{
+  "name": "t5-dashboard-assets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Host-side asset pipeline: LVGL 9 fonts (Roboto) and alpha icons (Lucide) for the t5-dashboard firmware",
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/gen_assets.mjs",
+    "assets:clean": "node scripts/gen_assets.mjs --clean"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "lv_font_conv": "^1.5.3"
+  }
+}

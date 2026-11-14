@@ -1,0 +1,31 @@
+#pragma once
+
+#include <cstddef>
+
+#include "assets/fonts.h"
+#include "assets/icons.h"
+#include "lvgl.h"
+
+namespace screens {
+
+constexpr uint32_t kInk = 0x171717;
+constexpr uint32_t kGrey = 0x6B6B6B;
+constexpr uint32_t kFaint = 0xA8A29A;
+constexpr uint32_t kHairline = 0xDCD7CE;
+constexpr uint32_t kCard = 0xF4F2ED;
+
+// Page chrome shared by every dashboard. Returns the title label.
+lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj_t** clock,
+                 lv_obj_t** date);
+void rule(lv_obj_t* root, int y);
+void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated);
+
+void centered(lv_obj_t* parent, const lv_font_t* font, uint32_t colour, const char* text, int x,
+              int w, int y);
+void right_text(lv_obj_t* parent, const lv_font_t* font, uint32_t colour, const char* text,
+                int x, int w, int y);
+
+void format_price(char* out, size_t cap, float value, int decimals);
+void format_change(char* out, size_t cap, float pct);
+
+}  // namespace screens

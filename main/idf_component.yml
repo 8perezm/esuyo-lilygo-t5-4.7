@@ -1,0 +1,6 @@
+dependencies:
+  idf: ">=5.0"
+  lvgl/lvgl: "^9.2.0"
+  epdiy:
+    git: https://github.com/vroland/epdiy.git
+    version: "2.1.3"
