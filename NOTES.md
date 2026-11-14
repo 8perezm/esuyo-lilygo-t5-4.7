@@ -1,5 +1,12 @@
 # NOTES
 
+## Fixed: setup AP reboot loop on client connect
+
+Joining the `T5-Dashboard` AP aborted the chip (`ESP_ERR_NO_MEM` from
+`esp_timer_create` in the Wi-Fi coexistence path) and rebooted it, so the panel
+flashed once per attempt. `display::init()` now uses `EPD_FEED_QUEUE_8`, which
+frees ~46 KB of internal RAM. Boot heap is logged by `report_heap()`.
+
 ## Current blocker
 
 Panel updates only land once per boot with our epdiy display layer.

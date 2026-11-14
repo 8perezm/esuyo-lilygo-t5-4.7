@@ -9,6 +9,7 @@
 #include "cJSON.h"
 #include "display/display.h"
 #include "display/ui.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_sleep.h"
 #include "esp_system.h"
@@ -82,6 +83,13 @@ void refresh_active() {
   g_last_refresh = esp_timer_get_time();
 }
 
+void report_heap(const char* when) {
+  ESP_LOGI(kTag, "heap %s: internal free %u, largest %u, psram free %u", when,
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),
+           static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),
+           static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM)));
+}
+
 int sleep_minutes() {
   int m = settings::get().refresh_min;
   if (m < 30) m = 30;
@@ -101,6 +109,7 @@ void run() {
 
   settings::init();
   ESP_ERROR_CHECK(display::init() ? ESP_OK : ESP_FAIL);
+  report_heap("after display");
   if (!ui::begin()) {
     ESP_LOGE(kTag, "UI init failed");
   }
@@ -110,6 +119,7 @@ void run() {
   const bool online = net::wifi_start();
   if (online) net::time_sync_start();
   server::start();
+  report_heap("after server");
 
   const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
   ESP_LOGW(kTag, "boot: wake cause %d, wifi %s", cause, online ? "up" : "setup AP");

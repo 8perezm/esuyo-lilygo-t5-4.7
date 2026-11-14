@@ -20,9 +20,13 @@ int g_height = 0;
 namespace display {
 
 bool init() {
-  // The 1K LUT has no GC16/i2s lookup table on the ESP32, so use the 64K one
-  // and give Wi-Fi fewer internal buffers instead.
-  epd_init(&epd_board_lilygo_t5_47, &ED047TC1, EPD_LUT_64K);
+  // The 1K LUT has no GC16/i2s lookup table on the ESP32, so use the 64K one.
+  // The default 32-line feed queue reserves 2 x 32 x 960 bytes of internal RAM;
+  // the 8-line queue needs a quarter of that. Without it the Wi-Fi AP cannot
+  // allocate its coexistence timer when a client associates, and the chip
+  // aborts with ESP_ERR_NO_MEM (observed as a reboot loop on connect).
+  epd_init(&epd_board_lilygo_t5_47, &ED047TC1,
+           static_cast<EpdInitOptions>(EPD_LUT_64K | EPD_FEED_QUEUE_8));
   g_hl = epd_hl_init(EPD_BUILTIN_WAVEFORM);
   g_fb = epd_hl_get_framebuffer(&g_hl);
   g_width = epd_width();

@@ -130,6 +130,16 @@ idf.py -p COM12 -b 460800 flash
 
 ## Memory constraints (hard-won)
 
+- **The setup AP crashes on client connect if internal RAM is tight.** The Wi-Fi
+  stack creates a coexistence timer (`hostap_auth_open` →
+  `esp_coex_common_timer_setfn_wrapper` → `ets_timer_setfn`) the moment a station
+  associates; `esp_timer_create()` returned `ESP_ERR_NO_MEM`, `ESP_ERROR_CHECK`
+  called `abort()`, and the board rebooted in a loop — seen by the user as
+  "connecting fails and the screen flashes". Fixed by initialising epdiy with
+  `EPD_LUT_64K | EPD_FEED_QUEUE_8`: the default 32-line feed queue reserves
+  2 × 32 × 960 bytes of internal RAM, the 8-line queue a quarter of that.
+  Boot now reports `internal free 48355, largest 38912` after the server starts
+  (logged by `report_heap()` in `app.cpp`). Keep an eye on those numbers.
 - epdiy's 64K LUT takes 64 KB of internal RAM; Wi-Fi then cannot fit with
   default buffers. Current settings:
   `CONFIG_ESP_WIFI_IRAM_OPT=n`, `CONFIG_ESP_WIFI_RX_IRAM_OPT=n`,

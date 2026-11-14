@@ -8,6 +8,7 @@
 #include "data/weather.h"
 #include "display/ui.h"
 #include "esp_log.h"
+#include "net/wifi.h"
 #include "screens/common.h"
 
 namespace {
@@ -92,6 +93,13 @@ bool WeatherScreen::load() {
   if (s.city_count == 0) return false;
   if (s.city_index < 0 || s.city_index >= s.city_count) s.city_index = 0;
 
+  // Without a station connection there is nothing to reach: skip the TLS
+  // attempt (it only burns ~1.5 s and internal RAM) and keep what we have.
+  if (!net::wifi_connected()) {
+    apply();
+    return false;
+  }
+
   data::Weather fresh = w_;
   if (!weather::fetch(s.cities[s.city_index], s.fahrenheit, fresh)) {
     ESP_LOGW(kTag, "fetch failed, keeping previous");
@@ -117,9 +125,10 @@ void WeatherScreen::apply() {
   lv_obj_update_layout(temp_);
   ui::place(unit_, lv_obj_get_x(temp_) + lv_obj_get_width(temp_) + 8, 208);
 
-  ui::set_text(cond_, w_.valid ? condition_text(w_.code) : "NO DATA");
+  const bool online = net::wifi_connected();
+  ui::set_text(cond_, w_.valid ? condition_text(w_.code) : (online ? "NO DATA" : "NO WI-FI"));
   snprintf(buf, sizeof(buf), "FEELS %d\xC2\xB0", w_.feels);
-  ui::set_text(feels_, w_.valid ? buf : "FEELS --");
+  ui::set_text(feels_, w_.valid ? buf : (online ? "FEELS --" : "SETUP HOTSPOT"));
 
   const lv_image_dsc_t* icon = icon_get(weather::icon_for_code(w_.code), 48);
   if (icon_ != nullptr && icon != nullptr) lv_image_set_src(icon_, icon);
@@ -153,8 +162,15 @@ void WeatherScreen::apply() {
   }
 
   if (updated_ != nullptr) {
-    snprintf(buf, sizeof(buf), "%s%s", w_.stale ? "STALE " : "UPDATED ", w_.updated);
-    ui::set_text(updated_, w_.valid ? buf : "");
+    if (w_.valid) {
+      snprintf(buf, sizeof(buf), "%s%s", w_.stale ? "STALE " : "UPDATED ", w_.updated);
+      ui::set_text(updated_, buf);
+    } else if (online) {
+      ui::set_text(updated_, "");
+    } else {
+      snprintf(buf, sizeof(buf), "JOIN \"%s\" AT 192.168.4.1", net::ap_ssid());
+      ui::set_text(updated_, buf);
+    }
   }
   if (title_ != nullptr) ui::set_text(title_, s.cities[s.city_index].name);
 }

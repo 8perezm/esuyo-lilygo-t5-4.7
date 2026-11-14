@@ -8,6 +8,7 @@
 #include "data/quotes.h"
 #include "display/ui.h"
 #include "esp_log.h"
+#include "net/wifi.h"
 #include "screens/common.h"
 
 namespace {
@@ -81,7 +82,7 @@ int MarketScreen::symbols(const char* out[], int max) {
 bool MarketScreen::load() {
   const char* list[8] = {};
   int n = symbols(list, 8);
-  if (n == 0) {
+  if (n == 0 || !net::wifi_connected()) {
     apply();
     return false;
   }
