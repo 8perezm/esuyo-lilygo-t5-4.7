@@ -17,6 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "input/buttons.h"
+#include "input/gpio_probe.h"
 #include "net/http_server.h"
 #include "net/serial_cli.h"
 #include "net/wifi.h"
@@ -117,6 +118,7 @@ void run() {
   }
   buttons::begin();
   power::init();
+  probe::start();
   net::serial_cli_start();
 
   const bool online = net::wifi_start();

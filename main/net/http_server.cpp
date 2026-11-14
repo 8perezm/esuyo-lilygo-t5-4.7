@@ -16,6 +16,7 @@
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "input/gpio_probe.h"
 #include "net/http_client.h"
 #include "net/wifi.h"
 
@@ -383,6 +384,54 @@ esp_err_t handle_gpio_scan(httpd_req_t* req) {
   return err;
 }
 
+// Live state of every probed pin, for mapping real buttons: press one and its
+// level, ADC value and press count change here (and in the serial log).
+esp_err_t handle_gpio_live(httpd_req_t* req) {
+  log_req(req);
+  cJSON* root = cJSON_CreateObject();
+  cJSON* list = cJSON_AddArrayToObject(root, "pins");
+  for (int i = 0; i < probe::pin_count(); i++) {
+    cJSON* item = cJSON_CreateObject();
+    cJSON_AddNumberToObject(item, "gpio", probe::pin_gpio(i));
+    cJSON_AddNumberToObject(item, "level", probe::pin_level(i));
+    cJSON_AddNumberToObject(item, "mv", probe::pin_mv(i));
+    cJSON_AddNumberToObject(item, "presses", probe::pin_presses(i));
+    cJSON_AddNumberToObject(item, "age_ms", probe::pin_age_ms(i));
+    cJSON_AddItemToArray(list, item);
+  }
+  esp_err_t err = send_json(req, root);
+  cJSON_Delete(root);
+  return err;
+}
+
+
+// Debounced level changes recorded on the device, newest first.
+esp_err_t handle_gpio_events(httpd_req_t* req) {
+  log_req(req);
+  cJSON* root = cJSON_CreateObject();
+  cJSON_AddNumberToObject(root, "uptime_ms", esp_timer_get_time() / 1000);
+  cJSON* arr = cJSON_AddArrayToObject(root, "events");
+  const int n = probe::event_count();
+  for (int i = 0; i < n; i++) {
+    probe::Event e{};
+    if (!probe::event_at(i, e)) continue;
+    cJSON* item = cJSON_CreateObject();
+    cJSON_AddNumberToObject(item, "ms", e.ms);
+    cJSON_AddNumberToObject(item, "gpio", e.gpio);
+    cJSON_AddNumberToObject(item, "level", e.level);
+    cJSON_AddNumberToObject(item, "mv", e.mv);
+    cJSON_AddItemToArray(arr, item);
+  }
+  esp_err_t err = send_json(req, root);
+  cJSON_Delete(root);
+  return err;
+}
+
+esp_err_t handle_gpio_clear(httpd_req_t* req) {
+  log_req(req);
+  probe::clear_events();
+  return send_ok(req);
+}
 esp_err_t handle_catch_all(httpd_req_t* req) {
   log_req(req);
   // Captive-portal probes: the OS expects a redirect it can open, not a page.
@@ -443,6 +492,9 @@ void start() {
       {"/api/display/repair", HTTP_GET, handle_repair, nullptr},
       {"/api/display/repair", HTTP_POST, handle_repair, nullptr},
       {"/api/gpio/scan", HTTP_GET, handle_gpio_scan, nullptr},
+      {"/api/gpio/live", HTTP_GET, handle_gpio_live, nullptr},
+      {"/api/gpio/events", HTTP_GET, handle_gpio_events, nullptr},
+      {"/api/gpio/clear", HTTP_POST, handle_gpio_clear, nullptr},
       {"/*", HTTP_GET, handle_catch_all, nullptr},
   };
   for (const auto& route : routes) httpd_register_uri_handler(server, &route);

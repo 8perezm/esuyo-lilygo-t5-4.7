@@ -30,6 +30,17 @@ void init() {
   chan.atten = ADC_ATTEN_DB_12;
   chan.bitwidth = ADC_BITWIDTH_12;
   adc_oneshot_config_channel(g_adc, ADC_CHANNEL_0, &chan);  // GPIO36
+  // Channels used by the button probe: 3 = GPIO39, 6 = GPIO34, 7 = GPIO35.
+  adc_oneshot_config_channel(g_adc, ADC_CHANNEL_3, &chan);
+  adc_oneshot_config_channel(g_adc, ADC_CHANNEL_6, &chan);
+  adc_oneshot_config_channel(g_adc, ADC_CHANNEL_7, &chan);
+}
+
+int adc_millivolts(int channel) {
+  if (g_adc == nullptr) return -1;
+  int raw = 0;
+  if (adc_oneshot_read(g_adc, static_cast<adc_channel_t>(channel), &raw) != ESP_OK) return -1;
+  return raw * 3300 / 4095;
 }
 
 int battery_mv() {
