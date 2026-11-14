@@ -107,6 +107,13 @@ void run() {
   if (online) net::time_sync_start();
   server::start();
 
+  // The high-level buffer starts white, but the glass may still show whatever
+  // the last boot (or the previous firmware) left on it. Diffing against a
+  // blank buffer would only add ink, so wipe once before the first frame.
+  // This runs after the network allocations so it cannot fragment the heap
+  // they need.
+  display::wipe();
+
   const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
   ESP_LOGW(kTag, "boot: wake cause %d, wifi %s", cause, online ? "up" : "setup AP");
 

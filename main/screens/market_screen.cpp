@@ -13,8 +13,8 @@
 namespace {
 
 constexpr const char* kTag = "market-ui";
-constexpr int kRowY = 146;
-constexpr int kRowH = 74;
+constexpr int kRowY = 140;
+constexpr int kRowH = 70;
 
 int spark_min(const data::Quote& q) {
   float v = q.spark[0];
@@ -100,12 +100,20 @@ bool MarketScreen::load() {
 void MarketScreen::apply() {
   if (price_[0] == nullptr) return;
 
+  const char* configured[8] = {};
+  const int configured_count = symbols(configured, 8);
+
   char buf[48];
   for (int i = 0; i < 5; i++) {
     bool have = set_.valid && i < set_.count;
     if (!have) {
-      ui::set_text(name_[i], "--");
-      ui::set_text(symbol_[i], "");
+      if (i < configured_count) {
+        ui::set_text(name_[i], configured[i]);
+        ui::set_text(symbol_[i], "NO DATA");
+      } else {
+        ui::set_text(name_[i], "--");
+        ui::set_text(symbol_[i], "");
+      }
       ui::set_text(price_[i], "--");
       ui::set_text(change_[i], "");
       for (int b = 0; b < 5; b++) ui::resize(bars_[i][b], 14, 0);

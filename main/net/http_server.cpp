@@ -355,7 +355,7 @@ namespace server {
 void start() {
   httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
   cfg.max_uri_handlers = 24;
-  cfg.stack_size = 6144;   // internal RAM is tight next to epdiy + Wi-Fi
+  cfg.stack_size = 5120;   // internal RAM is tight next to epdiy + Wi-Fi
   cfg.lru_purge_enable = true;
   cfg.max_open_sockets = 3;
   cfg.uri_match_fn = httpd_uri_match_wildcard;

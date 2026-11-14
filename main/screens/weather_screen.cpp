@@ -40,16 +40,17 @@ void WeatherScreen::build(lv_obj_t* root) {
 
   // Today, emphasised: a light card on the left third.
   ui::panel(root, 28, 112, 396, 372, screens::kCard);
-  icon_ = ui::image(root, icon_get("sun", 48), 52, 138);
-  temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 52, 130);
-  unit_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "C", 286, 190);
-  cond_ = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52, 262);
-  feels_ = ui::label(root, &font_roboto_16, screens::kGrey, "FEELS --", 52, 292);
+  ui::label(root, &font_roboto_14, screens::kFaint, "TODAY", 52, 124);
+  icon_ = ui::image(root, icon_get("sun", 48), 52, 156);
+  temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 118, 144);
+  unit_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "C", 300, 208);
+  cond_ = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52, 268);
+  feels_ = ui::label(root, &font_roboto_16, screens::kGrey, "FEELS --", 52, 298);
 
   static const char* labels[3] = {"WIND", "RAIN", "HUMIDITY"};
   for (int i = 0; i < 3; i++) {
-    ui::label(root, &font_roboto_14, screens::kFaint, labels[i], 52 + i * 118, 330);
-    stats_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52 + i * 118, 350);
+    ui::label(root, &font_roboto_14, screens::kFaint, labels[i], 52 + i * 118, 338);
+    stats_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52 + i * 118, 358);
   }
 
   // Four following days, equal columns.
@@ -112,6 +113,9 @@ void WeatherScreen::apply() {
   snprintf(buf, sizeof(buf), "%d\xC2\xB0", w_.valid ? w_.temp : 0);
   ui::set_text(temp_, w_.valid ? buf : "--");
   ui::set_text(unit_, unit);
+  // Keep the unit against the number whatever its width ("8" vs "-12").
+  lv_obj_update_layout(temp_);
+  ui::place(unit_, lv_obj_get_x(temp_) + lv_obj_get_width(temp_) + 8, 208);
 
   ui::set_text(cond_, w_.valid ? condition_text(w_.code) : "NO DATA");
   snprintf(buf, sizeof(buf), "FEELS %d\xC2\xB0", w_.feels);

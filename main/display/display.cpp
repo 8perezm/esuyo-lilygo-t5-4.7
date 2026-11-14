@@ -48,6 +48,15 @@ void clear() {
   memset(g_fb, 0xFF, static_cast<size_t>(g_width) * g_height / 2);
 }
 
+void wipe() {
+  int64_t start = esp_timer_get_time();
+  epd_poweron();
+  epd_clear();
+  epd_poweroff();
+  ESP_LOGI(kTag, "panel wiped in %d ms",
+           static_cast<int>((esp_timer_get_time() - start) / 1000));
+}
+
 void refresh(enum EpdDrawMode mode) {
   int temp = epd_ambient_temperature();
   if (temp <= 0 || temp > 60) temp = 22;
