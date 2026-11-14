@@ -41,7 +41,7 @@ void WeatherScreen::build(lv_obj_t* root) {
 
   // Today, emphasised: a light card on the left third.
   ui::panel(root, 28, 112, 396, 372, screens::kCard);
-  ui::label(root, &font_roboto_14, screens::kFaint, "TODAY", 52, 124);
+  ui::label(root, &font_roboto_16, screens::kFaint, "TODAY", 52, 122);
   icon_ = ui::image(root, icon_get("sun", 48), 52, 156);
   temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 118, 144);
   unit_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "C", 300, 208);
@@ -50,38 +50,40 @@ void WeatherScreen::build(lv_obj_t* root) {
 
   static const char* labels[3] = {"WIND", "RAIN", "HUMIDITY"};
   for (int i = 0; i < 3; i++) {
-    ui::label(root, &font_roboto_14, screens::kFaint, labels[i], 52 + i * 118, 338);
-    stats_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52 + i * 118, 358);
+    ui::label(root, &font_roboto_16, screens::kGrey, labels[i], 52 + i * 118, 336);
+    stats_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52 + i * 118,
+                         360);
   }
 
-  // Four following days, equal columns.
+  // Four following days. Stop at x=856: the top-right of the glass is
+  // covered by the connector tab, so text must not run under it.
   for (int i = 0; i < 4; i++) {
-    int x = 444 + i * 124;
-    ui::panel(root, x, 112, 116, 372, 0xFFFFFF);
+    int x = 436 + i * 105;
+    ui::panel(root, x, 112, 101, 372, 0xFFFFFF);
     lv_obj_t* border = lv_obj_create(root);
     lv_obj_remove_style_all(border);
     lv_obj_set_pos(border, x, 112);
-    lv_obj_set_size(border, 116, 372);
+    lv_obj_set_size(border, 101, 372);
     lv_obj_set_style_border_width(border, 1, 0);
     lv_obj_set_style_border_color(border, lv_color_hex(screens::kHairline), 0);
     lv_obj_clear_flag(border, LV_OBJ_FLAG_SCROLLABLE);
 
     day_label_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", x, 128);
-    lv_obj_set_width(day_label_[i], 116);
+    lv_obj_set_width(day_label_[i], 101);
     lv_obj_set_style_text_align(day_label_[i], LV_TEXT_ALIGN_CENTER, 0);
 
-    day_icon_[i] = ui::image(root, nullptr, x + 34, 168);
+    day_icon_[i] = ui::image(root, nullptr, x + 26, 168);
 
     day_max_[i] = ui::label(root, &font_roboto_bold_48, screens::kInk, "--", x, 232);
-    lv_obj_set_width(day_max_[i], 116);
+    lv_obj_set_width(day_max_[i], 101);
     lv_obj_set_style_text_align(day_max_[i], LV_TEXT_ALIGN_CENTER, 0);
 
     day_min_[i] = ui::label(root, &font_roboto_20, screens::kGrey, "--", x, 292);
-    lv_obj_set_width(day_min_[i], 116);
+    lv_obj_set_width(day_min_[i], 101);
     lv_obj_set_style_text_align(day_min_[i], LV_TEXT_ALIGN_CENTER, 0);
 
     day_rain_[i] = ui::label(root, &font_roboto_16, screens::kGrey, "--", x, 340);
-    lv_obj_set_width(day_rain_[i], 116);
+    lv_obj_set_width(day_rain_[i], 101);
     lv_obj_set_style_text_align(day_rain_[i], LV_TEXT_ALIGN_CENTER, 0);
   }
 

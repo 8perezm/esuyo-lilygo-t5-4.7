@@ -38,10 +38,10 @@ void MarketScreen::build(lv_obj_t* root) {
   subtitle_ = ui::label(root, &font_roboto_16, screens::kGrey, "", 30, 70);
   screens::rule(root, 100);
 
-  ui::label(root, &font_roboto_14, screens::kFaint, "ASSET", 64, 114);
-  screens::right_text(root, &font_roboto_14, screens::kFaint, "LAST", 380, 230, 114);
-  screens::right_text(root, &font_roboto_14, screens::kFaint, "CHANGE", 630, 120, 114);
-  ui::label(root, &font_roboto_14, screens::kFaint, "5 DAYS", 790, 114);
+  ui::label(root, &font_roboto_16, screens::kGrey, "ASSET", 64, 114);
+  screens::right_text(root, &font_roboto_16, screens::kGrey, "LAST", 380, 230, 114);
+  screens::right_text(root, &font_roboto_16, screens::kGrey, "CHANGE", 630, 120, 114);
+  ui::label(root, &font_roboto_16, screens::kGrey, "5 DAYS", 790, 114);
 
   for (int i = 0; i < 5; i++) {
     int y = kRowY + i * kRowH;
@@ -49,7 +49,7 @@ void MarketScreen::build(lv_obj_t* root) {
 
     icon_[i] = ui::image(root, icon_get("trending-up", 24), 28, y + 22);
     name_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 64, y + 6);
-    symbol_[i] = ui::label(root, &font_roboto_14, screens::kGrey, "", 64, y + 34);
+    symbol_[i] = ui::label(root, &font_roboto_16, screens::kGrey, "", 64, y + 32);
     price_[i] = ui::label(root, &font_roboto_bold_48, screens::kInk, "--", 380, y + 2);
     lv_obj_set_width(price_[i], 230);
     lv_obj_set_style_text_align(price_[i], LV_TEXT_ALIGN_RIGHT, 0);
@@ -59,7 +59,7 @@ void MarketScreen::build(lv_obj_t* root) {
     lv_obj_set_style_text_align(change_[i], LV_TEXT_ALIGN_RIGHT, 0);
 
     for (int b = 0; b < 5; b++) {
-      bars_[i][b] = ui::panel(root, 790 + b * 26, y + 40, 14, 4, 0xC9C4BB);
+      bars_[i][b] = ui::panel(root, 790 + b * 26, y + 40, 14, 4, 0x6E6A63);
     }
   }
 
