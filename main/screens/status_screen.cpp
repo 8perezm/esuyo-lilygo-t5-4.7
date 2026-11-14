@@ -41,8 +41,8 @@ void StatusScreen::build(lv_obj_t* root) {
                                  "UPTIME",  "FIRMWARE", "PANEL",   "MAC"};
   for (int i = 0; i < 9; i++) {
     int y = 124 + i * 40;
-    ui::label(root, &font_roboto_bold_20, screens::kGrey, labels[i], 28, y + 2);
-    value_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 220, y);
+    ui::label(root, &font_roboto_bold_24, screens::kGrey, labels[i], 28, y);
+    value_[i] = ui::label(root, &font_roboto_medium_24, screens::kInk, "--", 220, y);
   }
 
   screens::footer(root, "< SCREEN   HOLD > SLEEP", &updated_);

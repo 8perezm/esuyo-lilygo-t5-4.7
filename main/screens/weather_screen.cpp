@@ -8,6 +8,8 @@
 #include "data/weather.h"
 #include "display/ui.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "net/wifi.h"
 #include "screens/common.h"
 
@@ -41,18 +43,22 @@ void WeatherScreen::build(lv_obj_t* root) {
 
   // Today, emphasised: a light card on the left third.
   ui::panel(root, 28, 112, 396, 372, screens::kCard);
-  ui::label(root, &font_roboto_bold_20, screens::kGrey, "TODAY", 52, 120);
+  ui::label(root, &font_roboto_bold_24, screens::kGrey, "TODAY", 52, 118);
   icon_ = ui::image(root, icon_get("sun", 48), 52, 156);
   temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 118, 144);
   unit_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "C", 300, 208);
-  cond_ = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52, 268);
-  feels_ = ui::label(root, &font_roboto_medium_20, screens::kGrey, "FEELS --", 52, 298);
+  cond_ = ui::label(root, &font_roboto_medium_24, screens::kInk, "--", 52, 264);
+  feels_ = ui::label(root, &font_roboto_medium_24, screens::kGrey, "FEELS --", 52, 296);
 
+  // One stat per row: at 24 px three side-by-side columns no longer fit.
   static const char* labels[3] = {"WIND", "RAIN", "HUMIDITY"};
   for (int i = 0; i < 3; i++) {
-    ui::label(root, &font_roboto_bold_20, screens::kGrey, labels[i], 52 + i * 118, 336);
-    stats_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", 52 + i * 118,
-                         360);
+    int y = 336 + i * 36;
+    ui::label(root, &font_roboto_bold_24, screens::kGrey, labels[i], 52, y);
+    lv_obj_t* value = ui::label(root, &font_roboto_medium_24, screens::kInk, "--", 150, y);
+    lv_obj_set_width(value, 250);
+    lv_obj_set_style_text_align(value, LV_TEXT_ALIGN_RIGHT, 0);
+    stats_[i] = value;
   }
 
   // Four following days. Stop at x=856: the top-right of the glass is
@@ -68,7 +74,7 @@ void WeatherScreen::build(lv_obj_t* root) {
     lv_obj_set_style_border_color(border, lv_color_hex(screens::kHairline), 0);
     lv_obj_clear_flag(border, LV_OBJ_FLAG_SCROLLABLE);
 
-    day_label_[i] = ui::label(root, &font_roboto_medium_20, screens::kInk, "--", x, 128);
+    day_label_[i] = ui::label(root, &font_roboto_bold_24, screens::kInk, "--", x, 124);
     lv_obj_set_width(day_label_[i], 101);
     lv_obj_set_style_text_align(day_label_[i], LV_TEXT_ALIGN_CENTER, 0);
 
@@ -78,11 +84,11 @@ void WeatherScreen::build(lv_obj_t* root) {
     lv_obj_set_width(day_max_[i], 101);
     lv_obj_set_style_text_align(day_max_[i], LV_TEXT_ALIGN_CENTER, 0);
 
-    day_min_[i] = ui::label(root, &font_roboto_medium_20, screens::kGrey, "--", x, 292);
+    day_min_[i] = ui::label(root, &font_roboto_medium_24, screens::kGrey, "--", x, 288);
     lv_obj_set_width(day_min_[i], 101);
     lv_obj_set_style_text_align(day_min_[i], LV_TEXT_ALIGN_CENTER, 0);
 
-    day_rain_[i] = ui::label(root, &font_roboto_medium_18, screens::kGrey, "--", x, 338);
+    day_rain_[i] = ui::label(root, &font_roboto_medium_20, screens::kGrey, "--", x, 336);
     lv_obj_set_width(day_rain_[i], 101);
     lv_obj_set_style_text_align(day_rain_[i], LV_TEXT_ALIGN_CENTER, 0);
   }
@@ -103,8 +109,16 @@ bool WeatherScreen::load() {
   }
 
   data::Weather fresh = w_;
-  if (!weather::fetch(s.cities[s.city_index], s.fahrenheit, fresh)) {
-    ESP_LOGW(kTag, "fetch failed, keeping previous");
+  bool ok = weather::fetch(s.cities[s.city_index], s.fahrenheit, fresh);
+  if (!ok) {
+    // One transient TLS failure should not replace a good screen with NO DATA.
+    ESP_LOGW(kTag, "fetch failed, retrying once");
+    vTaskDelay(pdMS_TO_TICKS(1500));
+    fresh = w_;
+    ok = weather::fetch(s.cities[s.city_index], s.fahrenheit, fresh);
+  }
+  if (!ok) {
+    ESP_LOGW(kTag, "fetch failed twice, keeping previous");
     if (w_.valid) w_.stale = true;
     apply();
     return false;

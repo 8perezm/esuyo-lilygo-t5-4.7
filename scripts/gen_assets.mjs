@@ -70,8 +70,10 @@ const FONT_SPECS = [
   { symbol: 'font_roboto_medium_18', weight: 'Medium', size: 18 },
   { symbol: 'font_roboto_medium_20', weight: 'Medium', size: 20 },
   { symbol: 'font_roboto_medium_22', weight: 'Medium', size: 22 },
+  { symbol: 'font_roboto_medium_24', weight: 'Medium', size: 24 },
   { symbol: 'font_roboto_medium_28', weight: 'Medium', size: 28 },
   { symbol: 'font_roboto_bold_20', weight: 'Bold', size: 20 },
+  { symbol: 'font_roboto_bold_24', weight: 'Bold', size: 24 },
   { symbol: 'font_roboto_bold_48', weight: 'Bold', size: 48 },
   { symbol: 'font_roboto_bold_96', weight: 'Bold', size: 96 },
 ];
