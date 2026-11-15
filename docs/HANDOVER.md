@@ -13,8 +13,7 @@ Last updated 2026-11-14, at the end of the first working day.
 - There are **three programmable buttons**, not five: two of the five switches are
   RESET and BOOT. BOOT is also the panel's shift-register strobe and cannot be used
   as a normal input.
-- The board is currently on Wi-Fi `FOO`, address `192.168.5.29`, with five cities
-  and five coins configured.
+- The board joins the configured Wi-Fi and serves the web panel at its LAN address, with cities and coins configured.
 
 ## Measured hardware
 
@@ -25,7 +24,7 @@ Last updated 2026-11-14, at the end of the first working day.
 | Flash | 16 MB, DIO, 40 MHz |
 | PSRAM | 8 MB module; **4 MB mapped** by IDF |
 | Panel | ED047TC1, 960 × 540, 16 greys, parallel via 74HCT4094 |
-| USB | CP210x bridge, **COM12** |
+| USB | CP210x bridge (port varies by machine) |
 | Battery | JST-PH 2.0 mm 2-pin, HX6610S charger (500 mA, 4.2 V, no protection FETs) |
 | Battery ADC | GPIO36 through a 2:1 divider (`board::kBatteryDivider`) |
 | Switches | 5 physical: RESET, BOOT (GPIO0), GPIO35, GPIO34, GPIO39 |
@@ -38,7 +37,7 @@ CKV 25, STH 26, CKH 5, latch 15, CFG_DATA 23, CFG_CLK 18, **CFG_STR 0**.
 - 4 bpp greyscale rendering through an LVGL 9 L8 canvas, Roboto (Medium/Bold) and
   Lucide icons; everything except the 48 px title and 96 px temperature is at least
   28 px.
-- Three screens (Weather, Markets, Status), carousel navigation, weather city
+- Five screens (Weather, Markets, Quote, Joke, Status), carousel navigation, weather city
   cycling, markets sub-screen cycling, long-press refresh, long-press sleep.
 - The last screen, market sub-screen and weather city are persisted in NVS and
   restored on boot; the restored screen then fetches fresh data.
@@ -132,7 +131,7 @@ sleep. Temperature is clamped to the waveform's 20–30 °C range by epdiy.
 
 ## Buttons
 
-Reported by the owner and consistent with the event log:
+Confirmed against the event log:
 
 | Position (left → right) | Switch | GPIO | Action |
 |---|---|---|---|
@@ -161,23 +160,18 @@ Useful when the browser route is unavailable.
 ## Build, flash, capture
 
 ```powershell
-cd C:\SERVER\REPOS\Esuyo\empty-14
-. .\scripts\env.ps1                 # ESP-IDF 5.3.6, Python 3.13 venv
+. .\scripts\env.ps1
 idf.py build
-idf.py -p COM12 -b 460800 flash
-.\scripts\capture.ps1 COM12 20      # 20 s log capture, resets the board
+idf.py -p <PORT> -b 460800 flash
+.\scripts\capture.ps1 <PORT> 20      # 20 s log capture, resets the board
 ```
 
-- Toolchain: `C:\Users\miguel\esp\esp-idf` (release/v5.3), tools in
-  `C:\Users\miguel\.espressif`, venv `idf5.3_py3.13_env`.
+- Toolchain: ESP-IDF release/v5.3, provisioned by `scripts/env.ps1`.
 - `capture.ps1` de-asserts DTR/RTS before resetting; pyserial's defaults would
   otherwise hold GPIO0 low and park the chip in download mode.
 - New source files need `idf.py reconfigure` because `main/CMakeLists.txt` uses a
   configure-time glob.
-- Vendor reference firmware (proven on this board):
-  `C:\SERVER\REPOS\Esuyo\t5-owm-check`, build with `pio run -e t5-4_7`
-  (not the default S3 environment). It writes a 4 MB partition table; restore ours
-  with `idf.py flash`.
+- Vendor reference firmware (proven on this board): LilyGo's EPD47 example for the T5 4.7 (PlatformIO `t5-4_7` environment, not the default S3 one). It writes a 4 MB partition table; restore ours with `idf.py flash`.
 
 ## Diagnostics quick reference
 
@@ -196,21 +190,9 @@ idf.py -p COM12 -b 460800 flash
    whether 34/39 should be swapped so the rightmost button advances.
 2. Fit a battery, measure the cell, and calibrate `kBatteryDivider` if needed; add a
    percentage and low-battery warning to Status and the web panel.
-3. Update the clock label when SNTP completes after the 8 s boot window.
-4. Consider caching the last good weather snapshot in NVS so a cold boot without
+3. Consider caching the last good weather snapshot in NVS so a cold boot without
    network can still show data.
-5. Optional: partial refresh for page turns to cut the 2.5 s wipe.
-
-## Provenance
-
-- The workspace was wiped on request at the start of this rebuild. The earlier
-  Python agent is still on GitHub: `8perezm/talaria`, branch `2-dev`, commit
-  `65374ba`. The 16 MB factory flash dump and the old hardware-spec document were
-  deleted in that wipe.
-- The panel A/B test lives in `C:\SERVER\REPOS\Esuyo\t5-owm-check` (vendor `web`
-  branch with a three-pass `PANEL TEST` block in `setup()`).
-- Current branch state is in `git log`; documentation was last committed with the
-  release of this file.
+4. Optional: partial refresh for page turns to cut the 2.5 s wipe.
 
 ## Things not to repeat
 

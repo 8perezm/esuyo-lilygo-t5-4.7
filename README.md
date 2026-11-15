@@ -1,8 +1,7 @@
 # T5 Dashboard
 
 A C++ dashboard firmware for the **LilyGo T5 4.7" e-paper** board
-(ESP32-WROVER-E, 960 × 540 ED047TC1, 16 greys). It replaces the MicroPython
-agent on this device with a purpose-built UI: several dashboard screens, a 4 bpp
+(ESP32-WROVER-E, 960 × 540 ED047TC1, 16 greys). It is a purpose-built UI: several dashboard screens, a 4 bpp
 greyscale renderer, physical button navigation, Wi-Fi setup without a cable, and
 a web control panel.
 
@@ -57,8 +56,8 @@ from the registry on the first build.
 ```powershell
 . .\scripts\env.ps1                 # ESP-IDF 5.3 on this machine
 idf.py build
-idf.py -p COM12 -b 460800 flash
-idf.py -p COM12 monitor             # or .\scripts\capture.ps1 COM12 20
+idf.py -p <PORT> -b 460800 flash
+idf.py -p <PORT> monitor             # or .\scripts\capture.ps1 <PORT> 20
 ```
 
 Regenerate fonts and icons after changing the asset list:

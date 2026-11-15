@@ -15,8 +15,8 @@ and the setup AP is password protected. Paths are available both on the setup AP
   "psram_free": 2569400,
   "uptime_s": 42,
   "rssi": -57,
-  "ip": "192.168.5.29",
-  "ssid": "FOO",
+  "ip": "192.168.1.20",
+  "ssid": "HomeNet",
   "screen": "weather",
   "subscreen": "",
   "battery_mv": 3980,
@@ -42,7 +42,7 @@ panel.
 
 ```json
 {
-  "wifi": { "ssid": "FOO", "configured": true },
+  "wifi": { "ssid": "HomeNet", "configured": true },
   "weather": {
     "cities": [{ "name": "Basingstoke", "lat": 51.2667, "lon": -1.0833 }],
     "active": 0,

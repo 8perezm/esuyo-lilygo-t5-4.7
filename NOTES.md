@@ -4,8 +4,8 @@ Working notes, 2026-11-14. Long-form context lives in `docs/HANDOVER.md`.
 
 ## State
 
-- Firmware builds and runs: panel updates, Wi-Fi joins (`FOO`), live weather and
-  markets, web panel at **192.168.5.29**, OTA and deep sleep work.
+- Firmware builds and runs: panel updates, Wi-Fi joins the configured network, live weather and
+  markets, web panel at the board's LAN address, OTA and deep sleep work.
 - Three user buttons (35, 34, 39). RESET and BOOT are the other two switches; BOOT
   is the panel strobe (`CFG_STR`) and is not readable at runtime.
 - Battery connector is JST-PH 2.0; a protected 2000 mAh cell has been chosen but
@@ -38,18 +38,16 @@ Working notes, 2026-11-14. Long-form context lives in `docs/HANDOVER.md`.
    advances.
 2. Fit the battery, compare `battery_mv` with a multimeter, adjust
    `board::kBatteryDivider`.
-3. Refresh the clock label when SNTP completes after the boot window.
-4. Optional: cache the last weather snapshot in NVS for offline cold boots.
-5. Optional: partial refresh for faster page turns.
+3. Optional: cache the last weather snapshot in NVS for offline cold boots.
+4. Optional: partial refresh for faster page turns.
 
 ## Commands
 
 ```powershell
-cd C:\SERVER\REPOS\Esuyo\empty-14
 . .\scripts\env.ps1
 idf.py build
-idf.py -p COM12 -b 460800 flash
-.\scripts\capture.ps1 COM12 20
+idf.py -p <PORT> -b 460800 flash
+.\scripts\capture.ps1 <PORT> 20
 ```
 
 After adding source files: `idf.py reconfigure` first (configure-time glob).

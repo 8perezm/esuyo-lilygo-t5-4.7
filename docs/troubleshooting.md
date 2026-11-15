@@ -1,7 +1,6 @@
 # Troubleshooting
 
-Commands assume the board is at `192.168.5.29`; substitute the address shown in
-`/api/status` or the boot log.
+Commands assume the board's LAN address (shown in `/api/status` or the boot log); substitute yours.
 
 ## Add city search reboots the board
 
@@ -106,7 +105,7 @@ button.
 
 ## The web panel is slow, or requests time out
 
-Check the link before blaming the firmware: `ping 192.168.5.29` from a machine on
+Check the link before blaming the firmware: `ping <board-ip>` from a machine on
 the same network. A healthy ESP32 answers every packet in single-digit
 milliseconds. Loss and RTTs in the hundreds of milliseconds to seconds mean the
 2.4 GHz link is the problem, and TCP retransmits then show up as requests that
@@ -142,7 +141,7 @@ divider is nominal 2:1 and uncalibrated; measure at the cell and adjust
 
 ## Flashing fails or the port is missing
 
-- The bridge is a CP210x on **COM12**.
+- The bridge is a CP210x; use the port your OS assigns (e.g. `COMx` on Windows, `/dev/ttyUSB0` on Linux).
 - If esptool cannot sync, hold **BOOT**, tap **RESET**, release BOOT.
 - `scripts/capture.ps1` de-asserts DTR/RTS before resetting; pyserial's defaults
   otherwise hold GPIO0 low and park the chip in download mode.
