@@ -152,3 +152,16 @@ divider is nominal 2:1 and uncalibrated; measure at the cell and adjust
 
 The chart API requires a browser-like `User-Agent`. The firmware sends one; if you
 add another provider or change the header, keep it.
+
+## Serial console (UART0, 115200)
+
+Useful when the browser route is unavailable:
+
+```
+wifi <ssid> <password>   save Wi-Fi and reboot
+status                   stored SSID, link state, clock, heap
+dump                     ASCII map of the current panel image
+tree                     widget geometry of the current screen
+reboot
+help
+```

@@ -73,7 +73,8 @@ alternative if thickness matters.
 - Deep sleep leaves the panel image in place; the timer wakes on
   `sleep_refresh_min` (default 30 min, settable 5–1440 in the web panel) and any
   user button wakes immediately. On that wake the board fetches fresh data,
-  redraws the current screen once and goes back to sleep.
+  redraws once — the current screen, or the next enabled one when the Power
+  card's wake-rotation option is on — and goes back to sleep.
 - Wi-Fi modem sleep is disabled (`esp_wifi_set_ps(WIFI_PS_NONE)`): sleeping
   between beacons adds a ~100 ms floor to every reply and causes packet loss with
   APs that buffer unicast poorly. Deep sleep powers the radio off entirely, so

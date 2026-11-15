@@ -6,8 +6,7 @@ greyscale renderer, physical button navigation, Wi-Fi setup without a cable, and
 a web control panel.
 
 > **Status:** working. The panel renders, updates on every screen change, joins
-> Wi-Fi, fetches live data and serves the web panel. Known gaps and next steps
-> are listed in [`docs/HANDOVER.md`](docs/HANDOVER.md).
+> Wi-Fi, fetches live data and serves the web panel.
 
 ## Screens
 
@@ -71,13 +70,11 @@ npm run assets
 
 | Document | Contents |
 |---|---|
-| [`docs/HANDOVER.md`](docs/HANDOVER.md) | Current state, measured hardware, boot flow, known issues, next steps, history |
 | [`docs/architecture.md`](docs/architecture.md) | Layers, rendering path, memory budget, how to add a screen |
 | [`docs/api.md`](docs/api.md) | REST endpoints, request/response shapes |
 | [`docs/buttons.md`](docs/buttons.md) | Physical button map, BOOT/RESET limits, discovery mode |
 | [`docs/battery.md`](docs/battery.md) | Battery connector, cell requirements, polarity, runtime |
 | [`docs/troubleshooting.md`](docs/troubleshooting.md) | No data, setup AP, stale panel, TLS, clocks, heap |
-| [`NOTES.md`](NOTES.md) | One-page working notes and immediate next actions |
 
 ## Layout
 

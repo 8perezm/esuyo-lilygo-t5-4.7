@@ -57,9 +57,7 @@ With the board on the network:
 | `POST /api/gpio/clear` | clear the buffer before a test |
 | `GET /api/gpio/scan` | older 5 s blocking scan of 12/13/14/34/35/36/39 |
 
-The web panel has a **Button test** card that polls `/api/gpio/live` four times a
-second and highlights the pressed row, which is the easiest way to identify a pin
-by eye.
+The web panel has a **Button test** card, hidden behind the **Debug** checkbox in the Status card. While shown it polls `/api/gpio/live` about every 1.5 s and highlights the pressed row, which is the easiest way to identify a pin by eye.
 
 ### Procedure that found the map
 
