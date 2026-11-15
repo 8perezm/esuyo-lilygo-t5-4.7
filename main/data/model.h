@@ -51,4 +51,22 @@ struct QuoteSet {
   Quote items[8];
 };
 
+// Text fetched from an external API (ZenQuotes, JokeAPI). Kept apart from the
+// market Quote above so the two names cannot be confused at a call site.
+struct DailyQuote {
+  bool valid = false;
+  bool stale = false;
+  char text[384] = {};
+  char author[48] = {};
+  char updated[6] = {};  // "14:05"
+};
+
+struct Joke {
+  bool valid = false;
+  bool stale = false;
+  char text[384] = {};
+  char category[16] = {};
+  char updated[6] = {};
+};
+
 }  // namespace data

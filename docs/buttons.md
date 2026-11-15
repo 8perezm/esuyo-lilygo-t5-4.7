@@ -12,7 +12,7 @@ Measured on this unit on 2026-11-14 by pressing each switch and reading
 |---|---|---|---|
 | 0 | RESET | EN | Hardware reboot; not programmable |
 | 1 | BOOT | 0 | Nothing while running — see below |
-| 2 | user | 35 | Weather: next city. Markets: next sub-screen (Crypto/Indices/Commodities). Other screens: refresh current data |
+| 2 | user | 35 | Weather: next city. Markets: next sub-screen (Crypto/Indices/Commodities). Quote/Joke: fetch another. Other screens: refresh current data |
 | 3 | user | 34 | Next screen; **hold 1.2 s** to enter deep sleep |
 | 4 | user | 39 | Previous screen; hold to refresh |
 

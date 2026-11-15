@@ -9,6 +9,7 @@ void run();
 const char* current_screen_id();
 const char* current_subscreen_id();
 int screen_count();
+bool screen_enabled(int index);
 const char* screen_id(int index);
 const char* screen_title(int index);
 

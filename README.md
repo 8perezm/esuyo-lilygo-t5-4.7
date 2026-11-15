@@ -16,9 +16,12 @@ a web control panel.
 |---|---|
 | Weather | Today emphasised (current temp, condition, feels-like, wind, rain, humidity) plus four following days; the middle button cycles the configured cities |
 | Markets | One screen with three sub-screens selected by the middle button: Crypto (five coins with price, change and a five-day sparkline), Indices (S&P 500, Nasdaq, Dow, FTSE 100, DAX) and Commodities (gold, silver, natural gas, crude). All three lists are configurable |
+| Quote | A random quote from ZenQuotes with its author; the middle button fetches another |
+| Joke | A single-line joke from JokeAPI (filtering out NSFW, racist and explicit content server-side); the middle button fetches another |
 | Status | Network, IP, signal, battery, memory, uptime, firmware, panel, MAC |
 
-The last screen, market sub-screen and weather city are stored in NVS, so a reboot
+Any of these can be switched off in the web panel; the buttons then skip it. The
+last screen, market sub-screen and weather city are stored in NVS, so a reboot
 returns to the same view and fetches fresh data for it.
 
 ## Controls
@@ -29,7 +32,7 @@ Five switches sit above the panel. Left to right they are:
 |---|---|---|
 | 0 | **RESET** | Hardware reset |
 | 1 | **BOOT / IO0** | Flashing only — cannot be read while the panel is driven |
-| 2 | **GPIO 35** | Middle: cycles city on Weather, Crypto/Indices/Commodities on Markets, refreshes elsewhere |
+| 2 | **GPIO 35** | Middle: cycles city on Weather, Crypto/Indices/Commodities on Markets, fetches another quote or joke, refreshes elsewhere |
 | 3 | **GPIO 34** | Advances to the next screen; hold 1.2 s to sleep |
 | 4 | **GPIO 39** | Steps back a screen; hold to refresh |
 
@@ -43,7 +46,8 @@ On first boot, or when no saved network works, the board raises the hotspot
 **http://192.168.4.1/** (captive-portal redirects included). Enter the home
 network in the Wi-Fi card and press **Save & connect**. Afterwards the panel is
 served at the board's LAN address, and the same page edits cities, coins, index
-and commodity symbols, refresh/sleep timings, and performs OTA updates.
+and commodity symbols, data-refresh, idle-sleep and deep-sleep-refresh timings,
+and performs OTA updates.
 
 ## Build and flash
 
@@ -85,7 +89,7 @@ main/
   input/       debounced buttons, live GPIO probe
   net/         Wi-Fi, HTTP server/client, serial console
   data/        Open-Meteo and Yahoo providers
-  screens/     weather, markets (3 sub-screens), status
+  screens/     weather, markets (3 sub-screens), quote, joke, status
   assets/      generated Roboto fonts and Lucide icons
   www/         embedded control panel
 scripts/       env, flash, capture, asset pipeline
@@ -102,3 +106,4 @@ https://wiki.lilygo.cc/products/t5-series/t5-e-paper/quick-start.html
 https://www.printables.com/model/272575-case-for-lilygo-t5-47-inch-e-paper
 https://www.thingiverse.com/thing:4890972
 https://www.thingiverse.com/thing:4749075
+https://www.thingiverse.com/thing:5638478

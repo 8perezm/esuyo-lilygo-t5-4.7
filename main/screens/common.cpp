@@ -32,7 +32,7 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
   return title_label;
 }
 
-void rule(lv_obj_t* root, int y) { ui::panel(root, 28, y, 904, 2, kHairline); }
+void rule(lv_obj_t* root, int y) { ui::panel(root, 28, y, 904, kRuleHeight, kHairline); }
 
 void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated) {
   ui::label(root, &font_roboto_medium_28, kFaint, hint, 28, 500);
@@ -55,6 +55,42 @@ void right_text(lv_obj_t* parent, const lv_font_t* font, uint32_t colour, const 
   lv_obj_t* obj = ui::label(parent, font, colour, text, x, y);
   lv_obj_set_width(obj, w);
   lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_RIGHT, 0);
+}
+
+lv_obj_t* body_text(lv_obj_t* root, const char* text) {
+  lv_obj_t* obj = ui::label(root, &font_roboto_bold_48, kInk, text, 48, 132);
+  lv_obj_set_width(obj, 864);
+  lv_label_set_long_mode(obj, LV_LABEL_LONG_WRAP);
+  lv_obj_set_style_text_line_space(obj, 10, 0);
+  return obj;
+}
+
+int fit_body(lv_obj_t* label, int max_bottom) {
+  if (label == nullptr) return 132;
+  // Largest first: short quotes land on 48 px, the common 100-200 character
+  // ones on 36 px, and only a very long joke drops to 28/24.
+  static const lv_font_t* kSizes[] = {&font_roboto_bold_48, &font_roboto_bold_36,
+                                      &font_roboto_bold_28, &font_roboto_medium_24};
+  for (const lv_font_t* font : kSizes) {
+    lv_obj_set_style_text_font(label, font, 0);
+    lv_obj_update_layout(label);
+    if (lv_obj_get_y(label) + lv_obj_get_height(label) <= max_bottom) break;
+  }
+  return lv_obj_get_y(label) + lv_obj_get_height(label);
+}
+
+void fit_title(lv_obj_t* label, int max_width) {
+  if (label == nullptr) return;
+  static const lv_font_t* kSizes[] = {&font_roboto_bold_48, &font_roboto_bold_36,
+                                      &font_roboto_bold_28, &font_roboto_medium_24};
+  const char* text = lv_label_get_text(label);
+  if (text == nullptr || *text == '\0') return;
+  for (const lv_font_t* font : kSizes) {
+    lv_obj_set_style_text_font(label, font, 0);
+    lv_point_t size{};
+    lv_text_get_size(&size, text, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    if (size.x <= max_width) break;
+  }
 }
 
 void format_price(char* out, size_t cap, float value, int decimals) {

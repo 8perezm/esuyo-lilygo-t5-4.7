@@ -86,7 +86,7 @@ void MarketScreen::build(lv_obj_t* root) {
 
   for (int i = 0; i < 5; i++) {
     int y = kRowY + i * kRowH;
-    if (i > 0) ui::panel(root, 28, y - 12, 904, 1, screens::kHairline);
+    if (i > 0) ui::panel(root, 28, y - 12, 904, screens::kDividerHeight, screens::kHairline);
 
     icon_[i] = ui::image(root, icon_get("trending-up", 24), 28, y + 22);
     name_[i] = ui::label(root, &font_roboto_medium_28, screens::kInk, "--", 64, y + 20);

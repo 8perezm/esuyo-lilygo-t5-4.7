@@ -70,21 +70,29 @@ alternative if thickness matters.
   cell expect 3.7–4.2 V.
 - The ADC is uncalibrated. If a multimeter disagrees by more than ~100 mV, adjust
   `kBatteryDivider` (measure, then `divider = measured_cell_mv / pin_mv`).
-- Deep sleep leaves the panel image in place; the timer wakes on `refresh_min`
-  (default 15 min) and any user button wakes immediately.
+- Deep sleep leaves the panel image in place; the timer wakes on
+  `sleep_refresh_min` (default 30 min, settable 5–1440 in the web panel) and any
+  user button wakes immediately. On that wake the board fetches fresh data,
+  redraws the current screen once and goes back to sleep.
+- Wi-Fi modem sleep is disabled (`esp_wifi_set_ps(WIFI_PS_NONE)`): sleeping
+  between beacons adds a ~100 ms floor to every reply and causes packet loss with
+  APs that buffer unicast poorly. Deep sleep powers the radio off entirely, so
+  this costs nothing while the panel is asleep. While awake it costs a few mA.
 
 ## Runtime estimate
 
 Sleep current is quoted at ~170 µA for this board. Each wake costs roughly 15–25 s
 of Wi-Fi, TLS and a 1.5 s panel refresh, plus a 2.5 s wipe.
 
-| Capacity | 15 min refresh | 5 min refresh |
+| Capacity | 15 min sleep refresh | 5 min sleep refresh |
 |---|---|---|
 | 1000 mAh | ~2–3 weeks | ~1 week |
 | 2000 mAh | ~4–6 weeks | ~2 weeks |
 
-These are estimates from measured wake times, not a lab measurement. The first
-real battery should be characterised with the Status screen and a timer.
+These are estimates from measured wake times, not a lab measurement. The default
+30-minute interval sits between the two columns (roughly half the wake cost of
+the 15-minute one). The first real battery should be characterised with the
+Status screen and a timer.
 
 ![EEMB LP803465](images/eemb-803465.png)
 

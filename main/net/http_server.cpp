@@ -28,12 +28,24 @@ namespace {
 constexpr const char* kTag = "http";
 constexpr size_t kMaxBody = 32768;
 
+// Last request time in milliseconds since boot. Written by the httpd task and
+// read by the main loop; a 32-bit aligned store is atomic on this core and the
+// unsigned subtraction in client_active() survives the 49-day wraparound.
+volatile uint32_t g_last_client_ms = 0;
+volatile bool g_client_seen = false;
+
+void mark_client() {
+  g_last_client_ms = static_cast<uint32_t>(esp_timer_get_time() / 1000);
+  g_client_seen = true;
+}
+
 // Geocoding is the only route that performs HTTPS from the control panel, and
 // mbedTLS needs far more stack than the 5 KB the httpd worker gets on this
 // board. Running it there overflowed the httpd stack and rebooted the panel as
 // soon as Add city searched. One small background worker keeps the TLS session
-// off the HTTP server task; the handler waits for its reply.
-constexpr UBaseType_t kGeocodeTaskStack = 8192;
+// off the HTTP server task; the handler waits for its reply. The worker's stack
+// high-water mark was ~2.4 KB free at 8 KB, which is thin for a TLS handshake.
+constexpr UBaseType_t kGeocodeTaskStack = 10240;
 constexpr uint32_t kGeocodeWaitMs = 25000;
 
 SemaphoreHandle_t g_geocode_mutex = nullptr;
@@ -43,6 +55,7 @@ std::string g_geocode_query;
 std::string g_geocode_body;
 bool g_geocode_ok = false;
 bool g_geocode_started = false;
+bool g_geocode_busy = false;
 uint32_t g_geocode_job = 0;
 uint32_t g_geocode_finished = 0;
 
@@ -101,8 +114,10 @@ bool geocode_start() {
 }
 
 // One line per request: the first thing to look at when the panel "does not
-// save" or a browser cannot reach a route.
+// save" or a browser cannot reach a route. Every hit also counts as a watching
+// client, which keeps the board out of deep sleep (see client_active()).
 void log_req(httpd_req_t* req) {
+  mark_client();
   const char* method = req->method == HTTP_GET      ? "GET"
                        : req->method == HTTP_PUT    ? "PUT"
                        : req->method == HTTP_POST   ? "POST"
@@ -239,6 +254,7 @@ esp_err_t handle_screens(httpd_req_t* req) {
     cJSON* item = cJSON_CreateObject();
     cJSON_AddStringToObject(item, "id", app::screen_id(i));
     cJSON_AddStringToObject(item, "title", app::screen_title(i));
+    cJSON_AddBoolToObject(item, "enabled", app::screen_enabled(i));
     cJSON_AddItemToArray(list, item);
   }
   esp_err_t err = send_json(req, root);
@@ -251,7 +267,11 @@ esp_err_t handle_display(httpd_req_t* req) {
   std::string body = read_body(req);
   cJSON* root = cJSON_Parse(body.c_str());
   const cJSON* screen = cJSON_GetObjectItemCaseSensitive(root, "screen");
-  if (cJSON_IsString(screen)) app::request_screen(screen->valuestring);
+  // Asking for the screen that is already up would rebuild it (wipe plus two
+  // panel updates) and fetch the data again for nothing.
+  if (cJSON_IsString(screen) && strcmp(screen->valuestring, app::current_screen_id()) != 0) {
+    app::request_screen(screen->valuestring);
+  }
   cJSON_Delete(root);
   return send_ok(req);
 }
@@ -261,8 +281,16 @@ esp_err_t handle_refresh(httpd_req_t* req) {
   std::string body = read_body(req);
   cJSON* root = cJSON_Parse(body.c_str());
   const cJSON* screen = cJSON_GetObjectItemCaseSensitive(root, "screen");
-  if (cJSON_IsString(screen)) app::request_screen(screen->valuestring);
-  app::request_refresh();
+  // Refreshing the screen that is already showing must not queue a screen
+  // change as well: that would rebuild it and fetch the data twice (and the
+  // quote API rate-limits at five requests per 30 s). Switching screens already
+  // loads the data, so a switch replaces the extra refresh entirely.
+  bool switching = false;
+  if (cJSON_IsString(screen) && strcmp(screen->valuestring, app::current_screen_id()) != 0) {
+    app::request_screen(screen->valuestring);
+    switching = true;
+  }
+  if (!switching) app::request_refresh();
   cJSON_Delete(root);
   return send_ok(req);
 }
@@ -328,8 +356,20 @@ esp_err_t handle_geocode(httpd_req_t* req) {
   // upstream encoder does not turn "New York" into "New%20York" twice.
   const std::string decoded = net::url_decode(value);
 
-  // The HTTP server has a single worker, so only one lookup is in flight.
+  // The HTTP server has a single worker, so only one lookup is in flight. A
+  // second request is rejected instead of queued: the geocode worker serialises
+  // TLS anyway, and a queue of searches (which is what search-as-you-type
+  // produced) left the whole server stalled behind them.
   xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
+  if (g_geocode_busy) {
+    xSemaphoreGive(g_geocode_mutex);
+    ESP_LOGW(kTag, "geocode busy, rejecting '%s'", decoded.c_str());
+    httpd_resp_set_status(req, "503 Service Unavailable");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_set_hdr(req, "Retry-After", "2");
+    return httpd_resp_send(req, "lookup in progress", HTTPD_RESP_USE_STRLEN);
+  }
+  g_geocode_busy = true;
   g_geocode_query.assign(decoded);
   const uint32_t job = ++g_geocode_job;
   xSemaphoreGive(g_geocode_mutex);
@@ -337,22 +377,36 @@ esp_err_t handle_geocode(httpd_req_t* req) {
 
   std::string body;
   bool ok = false;
-  // A completion from an earlier timed-out lookup may arrive first; keep
-  // waiting until the worker reports this job.
+  bool mine = false;
+  // Bounded wait: a completion from an earlier lookup (or one whose handler
+  // already gave up) may be signalled first, so drain stale signals until this
+  // job's answer arrives or the overall deadline passes. The old code looped
+  // without a deadline and could hold the only HTTP worker indefinitely.
+  const int64_t deadline = esp_timer_get_time() + static_cast<int64_t>(kGeocodeWaitMs) * 1000;
   for (;;) {
-    if (xSemaphoreTake(g_geocode_done, pdMS_TO_TICKS(kGeocodeWaitMs)) != pdTRUE) {
-      ESP_LOGW(kTag, "geocode timeout for '%s'", decoded.c_str());
-      return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "lookup timed out");
-    }
+    const int64_t now = esp_timer_get_time();
+    if (now >= deadline) break;
+    const TickType_t wait = pdMS_TO_TICKS(static_cast<uint32_t>((deadline - now) / 1000));
+    if (xSemaphoreTake(g_geocode_done, wait == 0 ? 1 : wait) != pdTRUE) continue;
     xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
-    const bool mine = g_geocode_finished == job;
-    if (mine) {
+    const bool this_job = g_geocode_finished == job;
+    if (this_job) {
       body.swap(g_geocode_body);
       ok = g_geocode_ok;
       g_geocode_ok = false;
     }
     xSemaphoreGive(g_geocode_mutex);
-    if (mine) break;
+    if (this_job) {
+      mine = true;
+      break;
+    }
+  }
+  xSemaphoreTake(g_geocode_mutex, portMAX_DELAY);
+  g_geocode_busy = false;
+  xSemaphoreGive(g_geocode_mutex);
+  if (!mine) {
+    ESP_LOGW(kTag, "geocode timeout for '%s'", decoded.c_str());
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "lookup timed out");
   }
   if (!ok) {
     return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "lookup failed");
@@ -389,6 +443,7 @@ esp_err_t handle_geocode(httpd_req_t* req) {
 }
 
 esp_err_t handle_ota(httpd_req_t* req) {
+  mark_client();
   const esp_partition_t* partition = esp_ota_get_next_update_partition(nullptr);
   if (partition == nullptr) return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "no slot");
 
@@ -567,6 +622,12 @@ esp_err_t handle_catch_all(httpd_req_t* req) {
 }  // namespace
 
 namespace server {
+
+bool client_active(unsigned within_ms) {
+  if (!g_client_seen) return false;
+  const uint32_t now = static_cast<uint32_t>(esp_timer_get_time() / 1000);
+  return (now - g_last_client_ms) <= within_ms;
+}
 
 void start() {
   httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();

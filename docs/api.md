@@ -30,6 +30,12 @@ heap. `psram_free` is reported separately. `wifi_mode` is `sta` when connected a
 `commodities` while the Markets screen is showing; it is empty on the other
 screens.
 
+The control panel polls this route every 5 s (about once a minute with the tab in
+the background). While those polls arrive the board stays awake: a request within
+the last 90 s restarts the idle timer, so the panel deep-sleeps `sleep_after_s`
+after the page is closed rather than under it. The poll itself never redraws the
+panel.
+
 ## Settings
 
 `GET /api/settings`
@@ -46,7 +52,15 @@ screens.
   "indices": { "symbols": ["^GSPC", "^IXIC", "^DJI", "^FTSE", "^GDAXI"] },
   "commodities": { "symbols": ["GC=F", "SI=F", "NG=F", "CL=F"] },
   "refresh_min": 15,
-  "sleep_after_s": 120
+  "sleep_after_s": 120,
+  "sleep_refresh_min": 30,
+  "screens": {
+    "weather": true,
+    "markets": true,
+    "quote": true,
+    "joke": true,
+    "status": true
+  }
 }
 ```
 
@@ -54,9 +68,27 @@ screens.
 and longitude are required per city. Changes persist in NVS and take effect on the
 next refresh (units and the active city apply immediately).
 
+The order of `weather.cities` is the order the Weather screen cycles through with
+the middle button, so the web panel reorders it by dragging city rows. The same
+order is kept when the device is restarted.
+
+The three timing fields are independent:
+
+- `refresh_min` — data refresh period while the board is awake (1–1440).
+- `sleep_after_s` — idle time before deep sleep (0–3600; `0` disables sleeping).
+- `sleep_refresh_min` — deep-sleep timer: the board wakes, fetches new data,
+  redraws once and sleeps again (5–1440, default 30). While asleep this is the
+  only automatic refresh; a user button wakes it at any time.
+
 `wifi.password` may be included in the PUT. If present and non-empty it is stored,
 and the device restarts after saving — this is what the panel's top **Save** button
 does when a password has been typed.
+
+`screens` switches individual screens off. A disabled screen is skipped by the
+buttons and rejected by `/api/display`, but it keeps its settings (cities, coins,
+symbols) so it can be re-enabled later. At least one screen must stay on: a PUT with
+all five `false` turns Status back on. If the screen currently on the panel is
+disabled, the device moves to the first enabled screen.
 
 ## Wi-Fi
 
@@ -69,22 +101,35 @@ station connection succeeds.
 `GET /api/geocode?q=Basingstoke` proxies Open-Meteo geocoding:
 `{"results":[{"name":"Basingstoke","country":"United Kingdom","admin1":"England","lat":51.2667,"lon":-1.0833}]}`
 
+Only one lookup runs at a time (TLS is serialised and the HTTP server has a single
+worker). A request that arrives while one is in flight is answered with **HTTP 503**
+instead of being queued, and a lookup that takes longer than 25 s returns 500. The
+web panel only searches when the **Search** button is pressed; it used to fire on
+every typing pause, and the lookups that queued behind each other stalled the whole
+server.
+
 **Captive portal:** `/generate_204`, `/hotspot-detect.html`, `/ncsi.txt` and
 similar probes return `302` to `http://192.168.4.1/`; any other unknown path serves
 the control panel.
 
 ## Screens
 
-`GET /api/screens` → `{"screens":[{"id":"weather","title":"Weather"},{"id":"markets","title":"Markets"},{"id":"status","title":"Status"}]}`
+`GET /api/screens` → `{"screens":[{"id":"weather","title":"Weather","enabled":true},{"id":"markets","title":"Markets","enabled":true},{"id":"quote","title":"Quote","enabled":true},{"id":"joke","title":"Joke","enabled":true},{"id":"status","title":"Status","enabled":true}]}`
+
+`enabled` mirrors the `screens` block of `/api/settings`. Disabled screens stay in
+the list so the web panel can show them greyed out with a toggle, but the buttons
+skip them.
 
 `POST /api/display` with `{"screen":"markets"}` queues a screen change (rendered by
 the main loop, ~4 s including the wipe). The Markets screen keeps its last
-sub-screen.
+sub-screen. A request for a disabled screen is logged and ignored.
 
 The old market ids still work as shortcuts and select the matching sub-screen:
 `{"screen":"crypto"}`, `{"screen":"indices"}`, `{"screen":"commodities"}`.
 
-`POST /api/refresh` with an optional screen id refreshes the data.
+`POST /api/refresh` with an optional screen id refreshes the data. A different id
+switches to that screen and loads it once; the current screen (or no id) is
+re-loaded in place, so one request never fetches twice.
 
 The last screen, market sub-screen and weather city are saved in NVS. After a
 reboot (or a timer wake) the panel restores that view and fetches fresh data.

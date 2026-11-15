@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "app/settings.h"
+#include "data/text.h"
 #include "data/weather.h"
 #include "display/ui.h"
 #include "esp_log.h"
@@ -37,8 +38,11 @@ void WeatherScreen::build(lv_obj_t* root) {
   char subtitle[24] = "5-DAY FORECAST";
   lv_obj_t* clock = nullptr;
   lv_obj_t* date = nullptr;
-  title_ = screens::header(root, settings::get().cities[settings::get().city_index].name, subtitle,
-                           &clock, &date);
+  const Settings& s = settings::get();
+  char city[sizeof(s.cities[0].name)] = "";
+  data::clean_text(s.cities[s.city_index].name, city, sizeof(city));
+  title_ = screens::header(root, city, subtitle, &clock, &date);
+  screens::fit_title(title_, 520);
   screens::rule(root, 100);
 
   // Today, emphasised: a light card on the left third.
@@ -70,7 +74,7 @@ void WeatherScreen::build(lv_obj_t* root) {
     lv_obj_remove_style_all(border);
     lv_obj_set_pos(border, x, 112);
     lv_obj_set_size(border, 118, 372);
-    lv_obj_set_style_border_width(border, 1, 0);
+    lv_obj_set_style_border_width(border, 2, 0);
     lv_obj_set_style_border_color(border, lv_color_hex(screens::kHairline), 0);
     lv_obj_clear_flag(border, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -188,7 +192,14 @@ void WeatherScreen::apply() {
       ui::set_text(updated_, buf);
     }
   }
-  if (title_ != nullptr) ui::set_text(title_, s.cities[s.city_index].name);
+  if (title_ != nullptr) {
+    // Only the characters the panel fonts can draw (a city added from the web
+    // panel may carry an accent), sized to stay clear of the clock.
+    char name[sizeof(s.cities[0].name)] = "";
+    data::clean_text(s.cities[s.city_index].name, name, sizeof(name));
+    ui::set_text(title_, name);
+    screens::fit_title(title_, 520);
+  }
 }
 
 void WeatherScreen::cycle_city(int dir) {

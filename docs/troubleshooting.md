@@ -19,6 +19,31 @@ only waits for its result. If searches fail again, look for
 fragmented to start the task, so reboot and check the heap numbers in
 `/api/status`.
 
+## The Quote screen stays on NO DATA
+
+`zenquotes.io` answers HTTP 200 with neither `Content-Length` nor chunked framing:
+the body ends when the server closes the socket. `esp_http_client` assumes an
+unknown length means chunked and parses zero bytes, so `net::http_get()` retries
+the same URL over a bare TLS socket (`http: close-delimited body, retrying over
+raw TLS`) and strips the headers itself. If that still fails, the log says which
+step broke (`raw TLS connect failed`, `raw TLS: bad status`, `raw TLS: no header
+terminator`).
+
+ZenQuotes also rate-limits the keyless endpoint to 5 requests per 30 seconds and
+returns HTTP 200 with `"q": "Too many requests..."` rather than an error code.
+That reply is detected and treated as a failure, so the previous quote stays on
+screen. Normal use — one fetch per refresh plus middle-button presses — is far
+below the limit; a script hammering `/api/refresh` is not.
+
+## Jokes look wrong or the screen stays on NO DATA
+
+The screen pins `type=single` so every reply is one block of text, and asks the
+API to exclude `nsfw`, `racist` and `explicit` jokes. JokeAPI reports its own
+failures as `"error": true` inside HTTP 200, so the body is checked, not the
+status. The serial log shows the category and text of every fetch
+(`jokes: Programming: ...`); a rejected or empty reply logs
+`jokes: no usable joke`.
+
 ## The panel shows NO DATA
 
 1. `GET /api/status` — check `ssid`, `ip`, `rssi`.
@@ -79,17 +104,35 @@ SNTP did not answer within the 8 s boot window. Data is unaffected. The label is
 only redrawn on the next refresh, so wait for the refresh timer or press the middle
 button.
 
+## The web panel is slow, or requests time out
+
+Check the link before blaming the firmware: `ping 192.168.5.29` from a machine on
+the same network. A healthy ESP32 answers every packet in single-digit
+milliseconds. Loss and RTTs in the hundreds of milliseconds to seconds mean the
+2.4 GHz link is the problem, and TCP retransmits then show up as requests that
+take 5–20 s. Compare with `ping <gateway>` to rule out the host's own link.
+
+The panel is 2.4 GHz-only, so a PC on 5 GHz cannot judge that band from its own
+scan. Modem sleep is already disabled in firmware; if loss persists the channel
+is congested or the AP is dropping buffered frames — move the AP/panel or change
+the AP's 2.4 GHz channel. Only three browser connections are served at once, so a
+stalled link plus a second tab polling `/api/gpio/live` compounds the delay.
+
 ## The web panel says the device is offline
 
-The board deep-sleeps after the configured idle time (default 2 minutes). Press any
-user button to wake it, then raise **Sleep after inactivity** to 5 minutes while
-working on it. Deep sleep keeps the last image on the glass.
+The board deep-sleeps after the configured idle time (default 2 minutes) and an
+asleep board cannot be reached over Wi-Fi. While the control panel is open it
+polls `/api/status` (every 5 s, or about once a minute from a background tab) and
+that keeps the board awake, so the panel sleeps `sleep_after_s` after the page is
+closed. Browsers freeze long-backgrounded tabs, which stops the polls and lets the
+panel sleep; press any user button to wake it and reload the page. Deep sleep
+keeps the last image on the glass.
 
 ## Text looks faint
 
 The panel is a low-contrast 16-grey display. The palette is deliberately dark
-(`0x1F1F1F` body, `0x2B2B2B` labels, `0x7A756C` rules) and nothing is smaller than
-28 px. Do not reintroduce lighter greys.
+(`0x1F1F1F` body, `0x2B2B2B` labels, `0x1F1F1F` rules that are 2-3 px thick) and
+nothing is smaller than 28 px. Do not reintroduce lighter greys or 1 px rules.
 
 ## Battery voltage is wrong
 

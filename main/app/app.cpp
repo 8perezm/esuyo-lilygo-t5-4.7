@@ -23,7 +23,9 @@
 #include "net/serial_cli.h"
 #include "net/wifi.h"
 #include "nvs_flash.h"
+#include "screens/joke_screen.h"
 #include "screens/market_screen.h"
+#include "screens/quote_screen.h"
 #include "screens/screen.h"
 #include "screens/status_screen.h"
 #include "screens/weather_screen.h"
@@ -34,9 +36,14 @@ constexpr const char* kTag = "app";
 
 WeatherScreen g_weather;
 MarketScreen g_markets(MarketScreen::Kind::Crypto, "markets", "Markets");
+QuoteScreen g_quote;
+JokeScreen g_joke;
 StatusScreen g_status;
 
-Screen* g_screens[] = {&g_weather, &g_markets, &g_status};
+// Carousel order. Screens can be switched off in the web panel; the buttons
+// then skip them, but every screen stays in this array so /api/screens can
+// report it as disabled.
+Screen* g_screens[] = {&g_weather, &g_markets, &g_quote, &g_joke, &g_status};
 constexpr int kScreenCount = sizeof(g_screens) / sizeof(g_screens[0]);
 
 int g_current = 0;
@@ -46,9 +53,38 @@ int64_t g_last_refresh = 0;
 volatile bool g_pending_screen = false;
 volatile bool g_pending_refresh = false;
 volatile bool g_pending_repair = false;
+volatile bool g_pending_screens = false;  // toggles changed, re-check the current screen
 volatile int g_pending_market_kind = -1;
 char g_pending_id[24] = {};
 bool g_wifi_changed = false;
+
+bool enabled(int index) {
+  return index >= 0 && index < kScreenCount && settings::screen_on(g_screens[index]->id());
+}
+
+int first_enabled() {
+  for (int i = 0; i < kScreenCount; i++) {
+    if (enabled(i)) return i;
+  }
+  return 0;  // settings guarantees at least one; belt and braces
+}
+
+// Walk the carousel in `dir` until an enabled screen turns up. If every screen
+// is off (which the web UI and settings both refuse to save) it stays put.
+int next_enabled(int from, int dir) {
+  for (int step = 1; step <= kScreenCount; step++) {
+    int index = from + dir * step;
+    index = ((index % kScreenCount) + kScreenCount) % kScreenCount;
+    if (enabled(index)) return index;
+  }
+  return from;
+}
+
+// The web UI polls /api/status every 5 s while the page is open. Browsers
+// throttle background tabs to about one timer a minute, so the lease is longer
+// than a poll interval to keep the panel awake behind an open page too.
+constexpr unsigned kClientGraceMs = 90000;
+bool g_web_client_was_active = false;
 
 int find_screen(const char* id) {
   for (int i = 0; i < kScreenCount; i++) {
@@ -95,8 +131,9 @@ void report_heap(const char* when) {
 }
 
 int sleep_minutes() {
-  int m = settings::get().refresh_min;
-  if (m < 30) m = 30;
+  int m = settings::get().sleep_refresh_min;
+  if (m < 5) m = 5;
+  if (m > 1440) m = 1440;
   return m;
 }
 
@@ -116,7 +153,7 @@ void run() {
   // Return to the screen and market sub-screen the panel was left on. The
   // show() below rebuilds it and loads fresh data.
   const int saved_screen = find_screen(ui_state::screen_id());
-  g_current = saved_screen >= 0 ? saved_screen : 0;
+  g_current = (saved_screen >= 0 && enabled(saved_screen)) ? saved_screen : first_enabled();
   g_markets.set_kind(static_cast<MarketScreen::Kind>(ui_state::market_kind()));
 
   ESP_ERROR_CHECK(display::init() ? ESP_OK : ESP_FAIL);
@@ -147,12 +184,13 @@ void run() {
   report_heap("after server");
 
   const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-  ESP_LOGW(kTag, "boot: wake cause %d, wifi %s", cause, online ? "up" : "setup AP");
+  ESP_LOGW(kTag, "boot: wake cause %d, reset reason %d, wifi %s", cause,
+           static_cast<int>(esp_reset_reason()), online ? "up" : "setup AP");
 
   // The panel keeps its last image through sleep, so only the data is stale.
   show(g_current, true);
 
-  if (cause == ESP_SLEEP_WAKEUP_TIMER) {
+  if (cause == ESP_SLEEP_WAKEUP_TIMER && !server::client_active(kClientGraceMs)) {
     ESP_LOGI(kTag, "timer wake: refresh done, back to sleep");
     power::sleep_now(sleep_minutes());
   }
@@ -165,6 +203,14 @@ void run() {
       g_pending_repair = false;
       display::repair();
       draw_current(true, false);
+      g_last_activity = esp_timer_get_time();
+    }
+
+    if (g_pending_screens) {
+      g_pending_screens = false;
+      // The toggles may have switched off the screen on the panel (or the one
+      // the market sub-screen belongs to). Move to the first one still on.
+      if (!enabled(g_current)) show(first_enabled(), true);
       g_last_activity = esp_timer_get_time();
     }
 
@@ -200,9 +246,9 @@ void run() {
       }
 
       if (btn == Btn::Left) {
-        show(g_current - 1, true);
+        show(next_enabled(g_current, -1), true);
       } else if (btn == Btn::Right) {
-        show(g_current + 1, true);
+        show(next_enabled(g_current, 1), true);
       } else {
         g_screens[g_current]->on_action(1);
         refresh_active();
@@ -211,6 +257,19 @@ void run() {
     }
 
     const int64_t now = esp_timer_get_time();
+    // An open control panel keeps the board awake: the page polls every 5 s,
+    // and each poll restarts the idle clock so the panel sleeps sleep_after_s
+    // after the page stops polling. Polls do not redraw anything.
+    if (server::client_active(kClientGraceMs)) {
+      g_last_activity = now;
+      if (!g_web_client_was_active) {
+        g_web_client_was_active = true;
+        ESP_LOGI(kTag, "web client active, staying awake");
+      }
+    } else if (g_web_client_was_active) {
+      g_web_client_was_active = false;
+      ESP_LOGI(kTag, "web client gone, idle sleep resumes");
+    }
     if (idle_s > 0 && (now - g_last_activity) > static_cast<int64_t>(idle_s) * 1000000) {
       power::sleep_now(sleep_minutes());
     }
@@ -228,6 +287,8 @@ const char* current_subscreen_id() {
 }
 
 int screen_count() { return kScreenCount; }
+
+bool screen_enabled(int index) { return enabled(index); }
 
 const char* screen_id(int index) {
   return (index >= 0 && index < kScreenCount) ? g_screens[index]->id() : "";
@@ -252,6 +313,15 @@ void request_screen(const char* id) {
   } else if (strcmp(id, "commodities") == 0) {
     market_kind = static_cast<int>(MarketScreen::Kind::Commodities);
     id = "markets";
+  }
+
+  // A screen switched off in the control panel is not addressable: the buttons
+  // skip it and so does the web UI, but a stale link should not force it back.
+  const int target = find_screen(id);
+  if (target < 0) return;
+  if (!enabled(target)) {
+    ESP_LOGW(kTag, "screen %s is disabled, ignoring request", id);
+    return;
   }
 
   g_pending_market_kind = market_kind;
@@ -298,6 +368,14 @@ void settings_to_json(char* out, size_t cap) {
 
   cJSON_AddNumberToObject(root, "refresh_min", s.refresh_min);
   cJSON_AddNumberToObject(root, "sleep_after_s", s.sleep_after_s);
+  cJSON_AddNumberToObject(root, "sleep_refresh_min", s.sleep_refresh_min);
+
+  cJSON* screens = cJSON_AddObjectToObject(root, "screens");
+  cJSON_AddBoolToObject(screens, "weather", s.show_weather);
+  cJSON_AddBoolToObject(screens, "markets", s.show_markets);
+  cJSON_AddBoolToObject(screens, "quote", s.show_quote);
+  cJSON_AddBoolToObject(screens, "joke", s.show_joke);
+  cJSON_AddBoolToObject(screens, "status", s.show_status);
 
   char* text = cJSON_PrintUnformatted(root);
   if (text != nullptr) {
@@ -387,6 +465,25 @@ bool apply_settings_json(const char* json, size_t len) {
     if (v < 0) v = 0;
     if (v > 3600) v = 3600;
     s.sleep_after_s = v;
+  }
+  const cJSON* sleep_refresh = cJSON_GetObjectItemCaseSensitive(root, "sleep_refresh_min");
+  if (cJSON_IsNumber(sleep_refresh)) {
+    int v = sleep_refresh->valueint;
+    if (v < 5) v = 5;
+    if (v > 1440) v = 1440;
+    s.sleep_refresh_min = v;
+  }
+
+  const cJSON* screens = cJSON_GetObjectItemCaseSensitive(root, "screens");
+  if (cJSON_IsObject(screens)) {
+    static const char* const kIds[] = {"weather", "markets", "quote", "joke", "status"};
+    for (const char* id : kIds) {
+      const cJSON* on = cJSON_GetObjectItemCaseSensitive(screens, id);
+      if (cJSON_IsBool(on) || cJSON_IsNumber(on)) settings::set_screen_on(id, cJSON_IsTrue(on));
+    }
+    // A panel with every screen off would have nothing to draw.
+    if (!settings::any_screen_on()) settings::set_screen_on("status", true);
+    g_pending_screens = true;
   }
 
   settings::save();

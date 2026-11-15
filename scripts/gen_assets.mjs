@@ -55,8 +55,14 @@ const ICONS_H = path.join(OUT_DIR, 'icons.h');
  */
 const FONT_URL_BASE = 'https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted';
 
-/** Exact glyph set requested by the spec. */
-const GLYPH_RANGES = '0x20-0x7F,0xB0,0xA3,0x20AC,0x2013,0x2026,0x2191,0x2193';
+/**
+ * Exact glyph set requested by the spec.
+ *
+ * 0xB7 (MIDDLE DOT) separates a city name from its region in the weather
+ * header and labels the joke category; 0x2014 (EM DASH) prefixes a quote's
+ * author. Without them LVGL draws a missing-glyph box on the panel.
+ */
+const GLYPH_RANGES = '0x20-0x7F,0xA3,0xB0,0xB7,0x20AC,0x2013,0x2014,0x2026,0x2191,0x2193';
 
 /**
  * Fonts to build. `weight` selects the source TTF, `size` is the pixel size
@@ -75,6 +81,7 @@ const FONT_SPECS = [
   { symbol: 'font_roboto_bold_20', weight: 'Bold', size: 20 },
   { symbol: 'font_roboto_bold_24', weight: 'Bold', size: 24 },
   { symbol: 'font_roboto_bold_28', weight: 'Bold', size: 28 },
+  { symbol: 'font_roboto_bold_36', weight: 'Bold', size: 36 },
   { symbol: 'font_roboto_bold_48', weight: 'Bold', size: 48 },
   { symbol: 'font_roboto_bold_96', weight: 'Bold', size: 96 },
 ];

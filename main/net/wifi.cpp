@@ -140,6 +140,11 @@ bool wifi_start() {
   // Keep the driver from restoring its own STA config and auto-connecting at
   // esp_wifi_start(); our settings are the single source of truth.
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  // This board serves a web panel from a browser, so do not use modem sleep:
+  // sleeping between beacons adds a ~100 ms floor to every reply and, on APs
+  // that buffer unicast badly, real packet loss and TCP retransmits. Deep sleep
+  // powers the radio down entirely, so this only costs current while awake.
+  esp_wifi_set_ps(WIFI_PS_NONE);
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi_event, nullptr));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_ip_event, nullptr));
 

@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "app/settings.h"
+#include "display/ui.h"
 #include "driver/uart.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
@@ -22,6 +23,8 @@ void print_help() {
   printf("\nserial console:\n");
   printf("  wifi <ssid> <password>   save Wi-Fi and reboot\n");
   printf("  status                   stored SSID, link state, heap\n");
+  printf("  dump                     ASCII map of the current panel image\n");
+  printf("  tree                     widget geometry of the current screen\n");
   printf("  reboot\n");
   printf("  help\n\n");
 }
@@ -77,6 +80,10 @@ void handle_line(char* line) {
     esp_restart();
   } else if (strcmp(line, "status") == 0) {
     print_status();
+  } else if (strcmp(line, "dump") == 0) {
+    ui::dump();
+  } else if (strcmp(line, "tree") == 0) {
+    ui::dump_tree();
   } else if (strcmp(line, "reboot") == 0) {
     printf("restarting...\n");
     vTaskDelay(pdMS_TO_TICKS(200));
