@@ -454,7 +454,7 @@ esp_err_t handle_ota(httpd_req_t* req) {
     return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "ota begin");
   }
 
-  char buf[4096];
+  char buf[1024];  // httpd worker stack is only 5120 bytes; a 4 KB buffer overflowed it.
   int remaining = req->content_len;
   int written = 0;
   while (remaining > 0) {

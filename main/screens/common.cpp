@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include "app/power.h"
 #include "display/ui.h"
 #include "net/wifi.h"
 
@@ -17,7 +18,6 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
   if (clock != nullptr) {
     char buf[8] = "--:--";
     net::format_clock(buf, sizeof(buf));
-    // Keep clear of the connector tab at the top right of the glass.
     *clock = ui::label(root, &font_roboto_medium_28, kInk, buf, 560, 16);
     lv_obj_set_width(*clock, 372);
     lv_obj_set_style_text_align(*clock, LV_TEXT_ALIGN_RIGHT, 0);
@@ -34,12 +34,33 @@ lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj
 
 void rule(lv_obj_t* root, int y) { ui::panel(root, 28, y, 904, kRuleHeight, kHairline); }
 
-void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated) {
+void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated, lv_obj_t** batt_text,
+            lv_obj_t** batt_frame, lv_obj_t** batt_fill) {
   ui::label(root, &font_roboto_medium_28, kFaint, hint, 28, 500);
+  // Bottom-right meter, right edge flush with the rules (x = 932): update text,
+  // then percent/word in the same 28 px footer type, then an 80x16 bar.
   if (updated != nullptr) {
-    *updated = ui::label(root, &font_roboto_medium_28, kFaint, "", 560, 500);
-    lv_obj_set_width(*updated, 372);
+    *updated = ui::label(root, &font_roboto_medium_28, kFaint, "", 540, 500);
+    lv_obj_set_width(*updated, 235);
     lv_obj_set_style_text_align(*updated, LV_TEXT_ALIGN_RIGHT, 0);
+    lv_label_set_long_mode(*updated, LV_LABEL_LONG_DOT);
+  }
+  if (batt_text != nullptr) {
+    *batt_text = ui::label(root, &font_roboto_medium_28, kInk, "", 780, 500);
+    lv_obj_set_width(*batt_text, 66);
+    lv_obj_set_style_text_align(*batt_text, LV_TEXT_ALIGN_RIGHT, 0);
+  }
+  if (batt_frame != nullptr || batt_fill != nullptr) {
+    lv_obj_t* frame = lv_obj_create(root);
+    lv_obj_remove_style_all(frame);
+    lv_obj_set_pos(frame, 852, 503);
+    lv_obj_set_size(frame, 80, 16);
+    lv_obj_set_style_border_width(frame, 2, 0);
+    lv_obj_set_style_border_color(frame, lv_color_hex(kInk), 0);
+    lv_obj_clear_flag(frame, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t* fill = ui::panel(root, 854, 505, 0, 12, kInk);
+    if (batt_frame != nullptr) *batt_frame = frame;
+    if (batt_fill != nullptr) *batt_fill = fill;
   }
 }
 
@@ -89,6 +110,52 @@ void refresh_chrome(lv_obj_t* clock, lv_obj_t* date) {
     char buf[16] = "";
     net::format_date(buf, sizeof(buf));
     ui::set_text(date, buf);
+  }
+}
+
+void refresh_battery(lv_obj_t* batt_text, lv_obj_t* batt_fill, lv_obj_t* batt_frame) {
+  if (batt_text == nullptr && batt_fill == nullptr && batt_frame == nullptr) return;
+  const power::BatteryInfo info = power::battery_info();
+  const bool show_bar =
+      info.state == power::BatteryState::kCharging || info.state == power::BatteryState::kBattery;
+  if (batt_text != nullptr) {
+    switch (info.state) {
+      case power::BatteryState::kAbsent:
+        lv_obj_add_flag(batt_text, LV_OBJ_FLAG_HIDDEN);
+        break;
+      case power::BatteryState::kUsb:
+        ui::set_text(batt_text, "USB");
+        lv_obj_clear_flag(batt_text, LV_OBJ_FLAG_HIDDEN);
+        break;
+      case power::BatteryState::kCharging:
+        ui::set_text(batt_text, "CHG");
+        lv_obj_clear_flag(batt_text, LV_OBJ_FLAG_HIDDEN);
+        break;
+      case power::BatteryState::kBattery: {
+        char buf[12];
+        snprintf(buf, sizeof(buf), "%d%%", info.pct);
+        ui::set_text(batt_text, buf);
+        lv_obj_clear_flag(batt_text, LV_OBJ_FLAG_HIDDEN);
+        break;
+      }
+    }
+  }
+  if (batt_frame != nullptr) {
+    if (show_bar) {
+      lv_obj_clear_flag(batt_frame, LV_OBJ_FLAG_HIDDEN);
+    } else {
+      lv_obj_add_flag(batt_frame, LV_OBJ_FLAG_HIDDEN);
+    }
+  }
+  if (batt_fill != nullptr) {
+    if (show_bar) {
+      // Inner width 76 px (80 - 2x2 border); height 12 px. CHG fills the bar.
+      const int pct = info.state == power::BatteryState::kCharging ? 100 : info.pct;
+      ui::resize(batt_fill, pct * 76 / 100, 12);
+      lv_obj_clear_flag(batt_fill, LV_OBJ_FLAG_HIDDEN);
+    } else {
+      lv_obj_add_flag(batt_fill, LV_OBJ_FLAG_HIDDEN);
+    }
   }
 }
 

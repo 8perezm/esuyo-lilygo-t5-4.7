@@ -18,14 +18,26 @@
 
 namespace {
 
-const char* battery_text(int mv) {
+const char* battery_text() {
   static char buf[32];
-  if (mv <= 0) return "--";
-  // Rough single-cell curve; good enough for a status line.
-  int pct = (mv - 3300) * 100 / (4150 - 3300);
-  if (pct < 0) pct = 0;
-  if (pct > 100) pct = 100;
-  snprintf(buf, sizeof(buf), "%d%% (%d.%02d V)", pct, mv / 1000, (mv % 1000) / 10);
+  const power::BatteryInfo info = power::battery_info();
+  switch (info.state) {
+    case power::BatteryState::kAbsent:
+      return "--";
+    case power::BatteryState::kUsb:
+      snprintf(buf, sizeof(buf), "USB (%d.%02d V)", info.mv / 1000, (info.mv % 1000) / 10);
+      return buf;
+    case power::BatteryState::kCharging:
+      snprintf(buf, sizeof(buf), "CHG (%d.%02d V)", info.mv / 1000, (info.mv % 1000) / 10);
+      return buf;
+    case power::BatteryState::kBattery:
+      break;
+  }
+  // Rough single-cell curve; good enough for a status line. While USB is
+  // connected the charger inflates the reading, so that state is reported as
+  // CHG/USB above instead of a percent.
+  snprintf(buf, sizeof(buf), "%d%% (%d.%02d V)", info.pct, info.mv / 1000,
+           (info.mv % 1000) / 10);
   return buf;
 }
 
@@ -43,11 +55,13 @@ void StatusScreen::build(lv_obj_t* root) {
     value_[i] = ui::label(root, &font_roboto_medium_28, screens::kInk, "--", 220, y);
   }
 
-  screens::footer(root, "< SCREEN   HOLD > SLEEP", &updated_);
+  screens::footer(root, "< SCREEN   HOLD > SLEEP", &updated_, &batt_text_, &batt_frame_,
+                  &batt_fill_);
 }
 
 bool StatusScreen::load() {
   screens::refresh_chrome(clock_, date_);
+  screens::refresh_battery(batt_text_, batt_fill_, batt_frame_);
   char buf[64];
 
   const char* mode = net::ap_active() ? "SETUP AP" : (net::wifi_connected() ? "CONNECTED" : "OFFLINE");
@@ -59,7 +73,7 @@ bool StatusScreen::load() {
   snprintf(buf, sizeof(buf), "%d dBm", net::wifi_rssi());
   ui::set_text(value_[2], net::wifi_connected() ? buf : "--");
 
-  ui::set_text(value_[3], battery_text(power::battery_mv()));
+  ui::set_text(value_[3], battery_text());
 
   snprintf(buf, sizeof(buf), "%u KB free / %u KB PSRAM",
            static_cast<unsigned>(esp_get_free_heap_size() / 1024),

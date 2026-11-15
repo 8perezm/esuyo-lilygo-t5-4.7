@@ -20,6 +20,9 @@ class JokeScreen : public Screen {
   data::Joke joke_{};
   lv_obj_t* clock_ = nullptr;
   lv_obj_t* date_ = nullptr;
+  lv_obj_t* batt_text_ = nullptr;
+  lv_obj_t* batt_frame_ = nullptr;
+  lv_obj_t* batt_fill_ = nullptr;
   lv_obj_t* subtitle_ = nullptr;
   lv_obj_t* text_ = nullptr;
   lv_obj_t* updated_ = nullptr;

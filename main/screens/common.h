@@ -22,6 +22,12 @@ constexpr uint32_t kCard = 0xEBE8E1;
 // Page chrome shared by every dashboard. Returns the title label.
 lv_obj_t* header(lv_obj_t* root, const char* title, const char* subtitle, lv_obj_t** clock,
                  lv_obj_t** date);
+// Footer hint on the left, last-update text bottom-centre, battery meter
+// bottom-right (percent + bar, right of the update text). Pass nullptrs to
+// omit the meter; when the ADC has no reading the meter hides itself.
+void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated,
+            lv_obj_t** batt_text = nullptr, lv_obj_t** batt_frame = nullptr,
+            lv_obj_t** batt_fill = nullptr);
 void rule(lv_obj_t* root, int y);
 void footer(lv_obj_t* root, const char* hint, lv_obj_t** updated);
 
@@ -41,6 +47,11 @@ int fit_body(lv_obj_t* label, int max_bottom);
 // periodic refreshes only re-run apply(), so without this the top-right time
 // would freeze until the next full screen change.
 void refresh_chrome(lv_obj_t* clock, lv_obj_t* date);
+
+// Re-draw the footer battery meter. Call it wherever the footer update text
+// is refreshed. USB and charging states show a word ("USB"/"CHG") instead of a
+// misleading percent; only on-cell readings drive the bar.
+void refresh_battery(lv_obj_t* batt_text, lv_obj_t* batt_fill, lv_obj_t* batt_frame);
 
 // Shrink a header title until it fits `max_width`. A geocoded city name such as
 // "Santa Cruz de Tenerife · Canary Islands" would otherwise run under the clock

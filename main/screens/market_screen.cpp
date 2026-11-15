@@ -102,7 +102,8 @@ void MarketScreen::build(lv_obj_t* root) {
     }
   }
 
-  screens::footer(root, "< SCREEN   MARKET >   HOLD > SLEEP", &updated_);
+  screens::footer(root, "< SCREEN   MARKET >   HOLD > SLEEP", &updated_, &batt_text_, &batt_frame_,
+                  &batt_fill_);
 }
 
 int MarketScreen::symbols(const char* out[], int max) {
@@ -140,6 +141,7 @@ bool MarketScreen::load() {
 void MarketScreen::apply() {
   if (price_[0] == nullptr) return;
   screens::refresh_chrome(clock_, date_);
+  screens::refresh_battery(batt_text_, batt_fill_, batt_frame_);
 
   const char* configured[8] = {};
   const int configured_count = symbols(configured, 8);

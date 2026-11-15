@@ -25,7 +25,8 @@ void QuoteScreen::build(lv_obj_t* root) {
   lv_obj_set_width(author_, 864);
   lv_obj_set_style_text_align(author_, LV_TEXT_ALIGN_RIGHT, 0);
 
-  screens::footer(root, "< SCREEN   NEW >   HOLD > SLEEP", &updated_);
+  screens::footer(root, "< SCREEN   NEW >   HOLD > SLEEP", &updated_, &batt_text_, &batt_frame_,
+                  &batt_fill_);
 }
 
 bool QuoteScreen::load() {
@@ -50,6 +51,7 @@ bool QuoteScreen::load() {
 void QuoteScreen::apply() {
   if (text_ == nullptr) return;
   screens::refresh_chrome(clock_, date_);
+  screens::refresh_battery(batt_text_, batt_fill_, batt_frame_);
 
   ui::set_text(text_, quote_.valid ? quote_.text : "NO DATA");
   // Leave room for the author line below: 28 px of type plus the gap.

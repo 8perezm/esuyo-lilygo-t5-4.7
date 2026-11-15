@@ -51,6 +51,34 @@ int battery_mv() {
   return static_cast<int>(pin_mv * board::kBatteryDivider);
 }
 
+int battery_pct() {
+  int mv = battery_mv();
+  if (mv <= 0) return -1;
+  int pct = (mv - 3300) * 100 / (4150 - 3300);
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  return pct;
+}
+
+bool battery_present() { return battery_mv() > 0; }
+
+namespace {
+// Nominal thresholds; adjust kBatteryDivider first if a meter disagrees.
+constexpr int kUsbMinMv = 4250;     // above CV: no-cell USB rail floats ~4360
+constexpr int kChargeMinMv = 4180;  // charger CV point: charging or full
+}  // namespace
+
+BatteryInfo battery_info() {
+  const int mv = battery_mv();
+  if (mv <= 0) return {BatteryState::kAbsent, 0, -1};
+  if (mv > kUsbMinMv) return {BatteryState::kUsb, mv, -1};
+  if (mv >= kChargeMinMv) return {BatteryState::kCharging, mv, -1};
+  int pct = (mv - 3300) * 100 / (4150 - 3300);
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  return {BatteryState::kBattery, mv, pct};
+}
+
 void sleep_now(int timer_min) {
   ESP_LOGW(kTag, "sleeping (%d min timer)", timer_min);
   display::power_off();

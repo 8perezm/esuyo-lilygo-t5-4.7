@@ -100,7 +100,8 @@ void WeatherScreen::build(lv_obj_t* root) {
     lv_obj_set_style_text_align(day_rain_[i], LV_TEXT_ALIGN_CENTER, 0);
   }
 
-  screens::footer(root, "< SCREEN   CITY >   HOLD > SLEEP", &updated_);
+  screens::footer(root, "< SCREEN   CITY >   HOLD > SLEEP", &updated_, &batt_text_, &batt_frame_,
+                  &batt_fill_);
 }
 
 bool WeatherScreen::load() {
@@ -138,6 +139,7 @@ bool WeatherScreen::load() {
 void WeatherScreen::apply() {
   if (temp_ == nullptr) return;
   screens::refresh_chrome(clock_, date_);
+  screens::refresh_battery(batt_text_, batt_fill_, batt_frame_);
   Settings& s = settings::get();
   const char* unit = s.fahrenheit ? "F" : "C";
 

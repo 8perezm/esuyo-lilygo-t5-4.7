@@ -64,8 +64,15 @@ alternative if thickness matters.
 
 - Voltage is read on **GPIO36** through a nominal **2:1** divider
   (`board::kBatteryDivider`), on ADC1 channel 0.
-- The reading appears on the Status screen, in `/api/status` (`battery_mv`) and in
-  the web panel.
+- The reading appears as a footer meter (percent + bar) on every screen, on the
+  Status screen, in `/api/status` (`battery_mv`) and in the web panel (top-bar
+  chip + Status card).
+- While USB is connected the charger holds the cell node at its ~4.2 V CV
+  point, so a percent would lie: above 4180 mV the meter shows **CHG** (full
+  bar) instead, above 4250 mV it shows **USB** (no-cell rail, ~4.36 V), and only
+  below that a real percent from the 3300–4150 mV curve. There is no
+  USB-sense GPIO on this board, so these are voltage inferences, not measured
+  charge states.
 - On USB with no cell the value floats around the charger rail (~4.36 V); with a
   cell expect 3.7–4.2 V.
 - The ADC is uncalibrated. If a multimeter disagrees by more than ~100 mV, adjust

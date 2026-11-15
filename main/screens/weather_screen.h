@@ -20,6 +20,9 @@ class WeatherScreen : public Screen {
   lv_obj_t* title_ = nullptr;
   lv_obj_t* clock_ = nullptr;
   lv_obj_t* date_ = nullptr;
+  lv_obj_t* batt_text_ = nullptr;
+  lv_obj_t* batt_frame_ = nullptr;
+  lv_obj_t* batt_fill_ = nullptr;
   lv_obj_t* icon_ = nullptr;
   lv_obj_t* temp_ = nullptr;
   lv_obj_t* unit_ = nullptr;

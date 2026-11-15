@@ -23,7 +23,8 @@ void JokeScreen::build(lv_obj_t* root) {
 
   text_ = screens::body_text(root, "--");
 
-  screens::footer(root, "< SCREEN   NEW >   HOLD > SLEEP", &updated_);
+  screens::footer(root, "< SCREEN   NEW >   HOLD > SLEEP", &updated_, &batt_text_, &batt_frame_,
+                  &batt_fill_);
 }
 
 bool JokeScreen::load() {
@@ -48,6 +49,7 @@ bool JokeScreen::load() {
 void JokeScreen::apply() {
   if (text_ == nullptr) return;
   screens::refresh_chrome(clock_, date_);
+  screens::refresh_battery(batt_text_, batt_fill_, batt_frame_);
 
   ui::set_text(text_, joke_.valid ? joke_.text : "NO DATA");
   screens::fit_body(text_, 460);
