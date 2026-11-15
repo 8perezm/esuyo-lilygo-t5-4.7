@@ -38,6 +38,8 @@ class MarketScreen : public Screen {
 
   lv_obj_t* title_label_ = nullptr;
   lv_obj_t* subtitle_ = nullptr;
+  lv_obj_t* clock_ = nullptr;
+  lv_obj_t* date_ = nullptr;
   lv_obj_t* updated_ = nullptr;
   lv_obj_t* name_[5] = {};
   lv_obj_t* symbol_[5] = {};

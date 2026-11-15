@@ -11,6 +11,8 @@ class StatusScreen : public Screen {
   bool load() override;
 
  private:
+  lv_obj_t* clock_ = nullptr;
+  lv_obj_t* date_ = nullptr;
   lv_obj_t* value_[9] = {};
   lv_obj_t* updated_ = nullptr;
 };

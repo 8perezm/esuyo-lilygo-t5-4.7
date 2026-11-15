@@ -187,6 +187,15 @@ void run() {
   ESP_LOGW(kTag, "boot: wake cause %d, reset reason %d, wifi %s", cause,
            static_cast<int>(esp_reset_reason()), online ? "up" : "setup AP");
 
+  // With wake rotation on, each timer wake steps the carousel forward one
+  // enabled screen (sub-screens stay where they were left: the weather city
+  // and market kind are restored from NVS as usual). show() persists the new
+  // position, so successive wakes keep cycling.
+  if (cause == ESP_SLEEP_WAKEUP_TIMER && settings::get().rotate_on_wake) {
+    g_current = next_enabled(g_current, 1);
+    ESP_LOGI(kTag, "wake rotation: advancing to %s", g_screens[g_current]->id());
+  }
+
   // The panel keeps its last image through sleep, so only the data is stale.
   show(g_current, true);
 
@@ -369,6 +378,7 @@ void settings_to_json(char* out, size_t cap) {
   cJSON_AddNumberToObject(root, "refresh_min", s.refresh_min);
   cJSON_AddNumberToObject(root, "sleep_after_s", s.sleep_after_s);
   cJSON_AddNumberToObject(root, "sleep_refresh_min", s.sleep_refresh_min);
+  cJSON_AddBoolToObject(root, "rotate_on_wake", s.rotate_on_wake);
 
   cJSON* screens = cJSON_AddObjectToObject(root, "screens");
   cJSON_AddBoolToObject(screens, "weather", s.show_weather);
@@ -473,6 +483,10 @@ bool apply_settings_json(const char* json, size_t len) {
     if (v > 1440) v = 1440;
     s.sleep_refresh_min = v;
   }
+  // Only touch the flag when the key is present, so an older cached panel
+  // that does not send it cannot switch rotation off behind the user's back.
+  const cJSON* rotate = cJSON_GetObjectItemCaseSensitive(root, "rotate_on_wake");
+  if (cJSON_IsBool(rotate) || cJSON_IsNumber(rotate)) s.rotate_on_wake = cJSON_IsTrue(rotate);
 
   const cJSON* screens = cJSON_GetObjectItemCaseSensitive(root, "screens");
   if (cJSON_IsObject(screens)) {

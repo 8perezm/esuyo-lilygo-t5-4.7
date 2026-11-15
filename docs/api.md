@@ -54,6 +54,7 @@ panel.
   "refresh_min": 15,
   "sleep_after_s": 120,
   "sleep_refresh_min": 30,
+  "rotate_on_wake": false,
   "screens": {
     "weather": true,
     "markets": true,
@@ -79,6 +80,12 @@ The three timing fields are independent:
 - `sleep_refresh_min` — deep-sleep timer: the board wakes, fetches new data,
   redraws once and sleeps again (5–1440, default 30). While asleep this is the
   only automatic refresh; a user button wakes it at any time.
+- `rotate_on_wake` — when `true`, each timer wake advances the carousel one
+  enabled screen before refreshing, so successive wakes cycle through the
+  screens instead of redrawing the same one (default `false`). The weather
+  city and market sub-screen are remembered as usual: a wake that lands on
+  weather shows the last-viewed city, and one that lands on markets shows the
+  last-viewed kind. With a single screen enabled this is a silent no-op.
 
 `wifi.password` may be included in the PUT. If present and non-empty it is stored,
 and the device restarts after saving — this is what the panel's top **Save** button

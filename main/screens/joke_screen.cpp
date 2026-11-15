@@ -16,9 +16,7 @@ constexpr const char* kTag = "joke-ui";
 }  // namespace
 
 void JokeScreen::build(lv_obj_t* root) {
-  lv_obj_t* clock = nullptr;
-  lv_obj_t* date = nullptr;
-  screens::header(root, "JOKE", "", &clock, &date);
+  screens::header(root, "JOKE", "", &clock_, &date_);
   // Dynamic: the category changes with every joke.
   subtitle_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "JOKEAPI", 30, 64);
   screens::rule(root, 100);
@@ -49,6 +47,7 @@ bool JokeScreen::load() {
 
 void JokeScreen::apply() {
   if (text_ == nullptr) return;
+  screens::refresh_chrome(clock_, date_);
 
   ui::set_text(text_, joke_.valid ? joke_.text : "NO DATA");
   screens::fit_body(text_, 460);

@@ -32,9 +32,7 @@ const char* battery_text(int mv) {
 }  // namespace
 
 void StatusScreen::build(lv_obj_t* root) {
-  lv_obj_t* clock = nullptr;
-  lv_obj_t* date = nullptr;
-  screens::header(root, "STATUS", "DEVICE AND NETWORK", &clock, &date);
+  screens::header(root, "STATUS", "DEVICE AND NETWORK", &clock_, &date_);
   screens::rule(root, 100);
 
   static const char* labels[] = {"NETWORK", "ADDRESS",  "SIGNAL",  "BATTERY", "MEMORY",
@@ -49,6 +47,7 @@ void StatusScreen::build(lv_obj_t* root) {
 }
 
 bool StatusScreen::load() {
+  screens::refresh_chrome(clock_, date_);
   char buf[64];
 
   const char* mode = net::ap_active() ? "SETUP AP" : (net::wifi_connected() ? "CONNECTED" : "OFFLINE");

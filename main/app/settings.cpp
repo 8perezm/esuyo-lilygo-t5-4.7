@@ -13,7 +13,7 @@ constexpr const char* kTag = "settings";
 constexpr const char* kNamespace = "cfg";
 constexpr const char* kKey = "dashboard";
 constexpr uint32_t kMagic = 0x54354701;  // 'T5G' + layout version 1
-constexpr uint32_t kVersion = 3;
+constexpr uint32_t kVersion = 4;
 
 struct Blob {
   uint32_t magic;
@@ -81,6 +81,44 @@ struct BlobV2 {
   uint32_t magic;
   uint32_t version;
   SettingsV2 s;
+};
+
+// Layout written by the per-screen-toggle firmware (v3). Same reasoning as
+// above: everything it holds is still valid, only the wake-rotation flag is
+// new, so it keeps its default (off).
+struct SettingsV3 {
+  char ssid[33];
+  char pass[65];
+
+  CityRef cities[8];
+  int city_count;
+  int city_index;
+
+  char coins[8][12];
+  int coin_count;
+
+  char indices[8][12];
+  int index_count;
+
+  char commodities[8][12];
+  int commodity_count;
+
+  int refresh_min;
+  int sleep_after_s;
+  int sleep_refresh_min;
+  bool fahrenheit;
+
+  bool show_weather;
+  bool show_markets;
+  bool show_status;
+  bool show_quote;
+  bool show_joke;
+};
+
+struct BlobV3 {
+  uint32_t magic;
+  uint32_t version;
+  SettingsV3 s;
 };
 
 Settings g_settings;
@@ -169,6 +207,7 @@ void defaults() {
   g_settings.refresh_min = 15;
   g_settings.sleep_after_s = 120;
   g_settings.sleep_refresh_min = 30;
+  g_settings.rotate_on_wake = false;
   g_settings.fahrenheit = false;
 
   g_settings.show_weather = true;
@@ -237,6 +276,42 @@ void init() {
     repair_city_names();
     ESP_LOGI(kTag, "loaded settings (%d cities, %d coins)", g_settings.city_count,
              g_settings.coin_count);
+    return;
+  }
+
+  // Wake-rotation firmware (v3): everything is still valid, only the
+  // rotate_on_wake flag is new, so it keeps its default (off).
+  if (err == ESP_OK && len == sizeof(BlobV3) && blob.magic == kMagic && blob.version == 3) {
+    BlobV3 old{};
+    memcpy(&old, &blob, sizeof(old));
+    if (old.s.city_count < 0 || old.s.city_count > 8) {
+      ESP_LOGW(kTag, "v3 settings are corrupt, using defaults");
+      return;
+    }
+    Settings& s = g_settings;  // defaults, so the new flag starts disabled
+    memcpy(s.ssid, old.s.ssid, sizeof(s.ssid));
+    memcpy(s.pass, old.s.pass, sizeof(s.pass));
+    memcpy(s.cities, old.s.cities, sizeof(s.cities));
+    s.city_count = old.s.city_count;
+    s.city_index = old.s.city_index;
+    memcpy(s.coins, old.s.coins, sizeof(s.coins));
+    s.coin_count = old.s.coin_count;
+    memcpy(s.indices, old.s.indices, sizeof(s.indices));
+    s.index_count = old.s.index_count;
+    memcpy(s.commodities, old.s.commodities, sizeof(s.commodities));
+    s.commodity_count = old.s.commodity_count;
+    s.refresh_min = old.s.refresh_min;
+    s.sleep_after_s = old.s.sleep_after_s;
+    s.sleep_refresh_min = old.s.sleep_refresh_min;
+    s.fahrenheit = old.s.fahrenheit;
+    s.show_weather = old.s.show_weather;
+    s.show_markets = old.s.show_markets;
+    s.show_status = old.s.show_status;
+    s.show_quote = old.s.show_quote;
+    s.show_joke = old.s.show_joke;
+    repair_city_names();
+    ESP_LOGW(kTag, "migrated v3 settings (ssid '%s')", s.ssid);
+    save();
     return;
   }
 

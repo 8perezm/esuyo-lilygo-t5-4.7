@@ -107,9 +107,8 @@ lv_obj_t* label(lv_obj_t* parent, const lv_font_t* font, uint32_t colour,
 }
 
 lv_obj_t* image(lv_obj_t* parent, const lv_image_dsc_t* img, int x, int y) {
-  if (img == nullptr) return nullptr;
   lv_obj_t* obj = lv_image_create(parent);
-  lv_image_set_src(obj, img);
+  if (img != nullptr) lv_image_set_src(obj, img);
   lv_obj_set_pos(obj, x, y);
   return obj;
 }
@@ -165,7 +164,7 @@ void probe() {
   static const Rect rects[] = {
       {"title", 28, 10, 270, 52},   {"subtitle", 30, 70, 127, 19},
       {"rule", 28, 100, 904, 3},    {"today", 52, 124, 44, 16},
-      {"icon", 52, 156, 48, 48},    {"temp", 118, 144, 74, 102},
+      {"icon", 52, 148, 96, 96},    {"temp", 162, 144, 74, 102},
       {"unit", 200, 208, 18, 30},   {"cond", 52, 268, 82, 22},
       {"stats", 52, 338, 300, 42},  {"daylbl", 444, 128, 488, 24},
       {"daymax", 444, 232, 488, 52}, {"footer", 28, 504, 211, 16},

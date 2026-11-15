@@ -73,9 +73,7 @@ void MarketScreen::on_action(int dir) {
 }
 
 void MarketScreen::build(lv_obj_t* root) {
-  lv_obj_t* clock = nullptr;
-  lv_obj_t* date = nullptr;
-  title_label_ = screens::header(root, kind_label(kind_), "", &clock, &date);
+  title_label_ = screens::header(root, kind_label(kind_), "", &clock_, &date_);
   subtitle_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "", 30, 64);
   screens::rule(root, 100);
 
@@ -141,6 +139,7 @@ bool MarketScreen::load() {
 
 void MarketScreen::apply() {
   if (price_[0] == nullptr) return;
+  screens::refresh_chrome(clock_, date_);
 
   const char* configured[8] = {};
   const int configured_count = symbols(configured, 8);

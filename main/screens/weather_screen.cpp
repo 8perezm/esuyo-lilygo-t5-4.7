@@ -36,20 +36,23 @@ const char* condition_text(int code) {
 
 void WeatherScreen::build(lv_obj_t* root) {
   char subtitle[24] = "5-DAY FORECAST";
-  lv_obj_t* clock = nullptr;
-  lv_obj_t* date = nullptr;
   const Settings& s = settings::get();
   char city[sizeof(s.cities[0].name)] = "";
   data::clean_text(s.cities[s.city_index].name, city, sizeof(city));
-  title_ = screens::header(root, city, subtitle, &clock, &date);
-  screens::fit_title(title_, 520);
+  title_ = screens::header(root, city, subtitle, &clock_, &date_);
+  screens::fit_title(title_, 700);
   screens::rule(root, 100);
 
   // Today, emphasised: a light card on the left third.
+  // The icon is the 48 px asset scaled 2x so it stands as tall as the 96 px
+  // temperature number beside it (pivot top-left keeps positioning exact).
   ui::panel(root, 28, 112, 396, 372, screens::kCard);
   ui::label(root, &font_roboto_bold_28, screens::kGrey, "TODAY", 52, 116);
-  icon_ = ui::image(root, icon_get("sun", 48), 52, 156);
-  temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 118, 144);
+  icon_ = ui::image(root, icon_get("sun", 48), 52, 148);
+  lv_image_set_pivot(icon_, 0, 0);
+  lv_image_set_scale(icon_, 512);
+  lv_image_set_antialias(icon_, true);
+  temp_ = ui::label(root, &font_roboto_bold_96, screens::kInk, "--", 162, 144);
   unit_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "C", 300, 208);
   cond_ = ui::label(root, &font_roboto_medium_28, screens::kInk, "--", 52, 262);
   feels_ = ui::label(root, &font_roboto_medium_28, screens::kGrey, "FEELS --", 52, 296);
@@ -134,6 +137,7 @@ bool WeatherScreen::load() {
 
 void WeatherScreen::apply() {
   if (temp_ == nullptr) return;
+  screens::refresh_chrome(clock_, date_);
   Settings& s = settings::get();
   const char* unit = s.fahrenheit ? "F" : "C";
 
@@ -198,7 +202,7 @@ void WeatherScreen::apply() {
     char name[sizeof(s.cities[0].name)] = "";
     data::clean_text(s.cities[s.city_index].name, name, sizeof(name));
     ui::set_text(title_, name);
-    screens::fit_title(title_, 520);
+    screens::fit_title(title_, 700);
   }
 }
 

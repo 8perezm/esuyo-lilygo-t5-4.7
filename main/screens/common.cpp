@@ -79,8 +79,20 @@ int fit_body(lv_obj_t* label, int max_bottom) {
   return lv_obj_get_y(label) + lv_obj_get_height(label);
 }
 
-void fit_title(lv_obj_t* label, int max_width) {
-  if (label == nullptr) return;
+void refresh_chrome(lv_obj_t* clock, lv_obj_t* date) {
+  if (clock != nullptr) {
+    char buf[8] = "--:--";
+    net::format_clock(buf, sizeof(buf));
+    ui::set_text(clock, buf);
+  }
+  if (date != nullptr) {
+    char buf[16] = "";
+    net::format_date(buf, sizeof(buf));
+    ui::set_text(date, buf);
+  }
+}
+
+void fit_title(lv_obj_t* label, int max_width) {  if (label == nullptr) return;
   static const lv_font_t* kSizes[] = {&font_roboto_bold_48, &font_roboto_bold_36,
                                       &font_roboto_bold_28, &font_roboto_medium_24};
   const char* text = lv_label_get_text(label);

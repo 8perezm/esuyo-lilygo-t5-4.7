@@ -18,6 +18,8 @@ class WeatherScreen : public Screen {
 
   data::Weather w_{};
   lv_obj_t* title_ = nullptr;
+  lv_obj_t* clock_ = nullptr;
+  lv_obj_t* date_ = nullptr;
   lv_obj_t* icon_ = nullptr;
   lv_obj_t* temp_ = nullptr;
   lv_obj_t* unit_ = nullptr;

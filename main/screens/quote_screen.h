@@ -17,6 +17,8 @@ class QuoteScreen : public Screen {
   void apply();
 
   data::DailyQuote quote_{};
+  lv_obj_t* clock_ = nullptr;
+  lv_obj_t* date_ = nullptr;
   lv_obj_t* text_ = nullptr;
   lv_obj_t* author_ = nullptr;
   lv_obj_t* updated_ = nullptr;

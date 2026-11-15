@@ -15,11 +15,9 @@ constexpr const char* kTag = "quote-ui";
 }  // namespace
 
 void QuoteScreen::build(lv_obj_t* root) {
-  lv_obj_t* clock = nullptr;
-  lv_obj_t* date = nullptr;
   // ZenQuotes asks for attribution; the header line is the only place the
   // panel can carry a link, so the source name stays visible.
-  screens::header(root, "QUOTE", "ZENQUOTES.IO", &clock, &date);
+  screens::header(root, "QUOTE", "ZENQUOTES.IO", &clock_, &date_);
   screens::rule(root, 100);
 
   text_ = screens::body_text(root, "--");
@@ -51,6 +49,7 @@ bool QuoteScreen::load() {
 
 void QuoteScreen::apply() {
   if (text_ == nullptr) return;
+  screens::refresh_chrome(clock_, date_);
 
   ui::set_text(text_, quote_.valid ? quote_.text : "NO DATA");
   // Leave room for the author line below: 28 px of type plus the gap.

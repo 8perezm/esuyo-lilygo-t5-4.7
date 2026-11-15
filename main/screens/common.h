@@ -36,6 +36,12 @@ void right_text(lv_obj_t* parent, const lv_font_t* font, uint32_t colour, const 
 lv_obj_t* body_text(lv_obj_t* root, const char* text);
 int fit_body(lv_obj_t* label, int max_bottom);
 
+// Re-read the wall clock into existing header labels. Every screen builds its
+// clock/date once in build() but sub-screen switches (city, market kind) and
+// periodic refreshes only re-run apply(), so without this the top-right time
+// would freeze until the next full screen change.
+void refresh_chrome(lv_obj_t* clock, lv_obj_t* date);
+
 // Shrink a header title until it fits `max_width`. A geocoded city name such as
 // "Santa Cruz de Tenerife · Canary Islands" would otherwise run under the clock
 // and off the glass.

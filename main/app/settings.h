@@ -30,6 +30,7 @@ struct Settings {
   int refresh_min;        // data refresh period while awake
   int sleep_after_s;      // idle time before deep sleep
   int sleep_refresh_min;  // deep-sleep timer: minutes between wake-refresh-sleep cycles
+  bool rotate_on_wake;    // timer wake shows the next enabled screen instead of the same one
   bool fahrenheit;
 
   // Which screens the carousel may show. The panel still reports every screen
