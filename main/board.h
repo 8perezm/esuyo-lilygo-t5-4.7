@@ -17,9 +17,10 @@ inline constexpr int kBtnLeft = 39;
 inline constexpr int kBtnMid = 35;
 inline constexpr int kBtnRight = 34;
 
-// Battery divider on ADC1 channel 0. The ratio is nominal until measured.
+// Battery divider on ADC1 channel 0. End-to-end cal 2026-11-16: 4.19 V cell
+// read 3818 mV at 2.0x, so 2.195x.
 inline constexpr int kBatteryAdc = 36;
-inline constexpr float kBatteryDivider = 2.0f;
+inline constexpr float kBatteryDivider = 2.195f;
 
 inline constexpr int kSpiFlashSizeMb = 16;
 

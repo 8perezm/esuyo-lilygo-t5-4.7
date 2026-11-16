@@ -68,15 +68,19 @@ alternative if thickness matters.
   Status screen, in `/api/status` (`battery_mv`) and in the web panel (top-bar
   chip + Status card).
 - While USB is connected the charger holds the cell node at its ~4.2 V CV
-  point, so a percent would lie: above 4180 mV the meter shows **CHG** (full
-  bar) instead, above 4250 mV it shows **USB** (no-cell rail, ~4.36 V), and only
-  below that a real percent from the 3300–4150 mV curve. There is no
+  point, so a percent would lie: above 4210 mV the meter shows **CHG** (full
+  bar) instead, above 4260 mV it shows **USB** (no-cell rail, ~4.36 V), and only
+  below that a real percent from the 3300–4200 mV curve. There is no
   USB-sense GPIO on this board, so these are voltage inferences, not measured
   charge states.
 - On USB with no cell the value floats around the charger rail (~4.36 V); with a
   cell expect 3.7–4.2 V.
-- The ADC is uncalibrated. If a multimeter disagrees by more than ~100 mV, adjust
-  `kBatteryDivider` (measure, then `divider = measured_cell_mv / pin_mv`).
+- The ADC is uncalibrated. End-to-end calibrated 2026-11-16 against a 4.19 V
+  EEMB 2000 mAh cell (`kBatteryDivider = 2.195`). If a multimeter disagrees,
+  re-measure and set `divider = measured_cell_mv / pin_mv`.
+- This divider is an end-to-end fudge (resistors + uncalibrated ESP32 ADC in
+  one number). It is accurate near full; low-end readings may be a few percent
+  off until proper `adc_cali` line-fitting lands.
 - Deep sleep leaves the panel image in place; the timer wakes on
   `sleep_refresh_min` (default 30 min, settable 5–1440 in the web panel) and any
   user button wakes immediately. On that wake the board fetches fresh data,

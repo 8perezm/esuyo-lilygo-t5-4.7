@@ -54,7 +54,7 @@ int battery_mv() {
 int battery_pct() {
   int mv = battery_mv();
   if (mv <= 0) return -1;
-  int pct = (mv - 3300) * 100 / (4150 - 3300);
+  int pct = (mv - 3300) * 100 / (4200 - 3300);
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
   return pct;
@@ -64,8 +64,8 @@ bool battery_present() { return battery_mv() > 0; }
 
 namespace {
 // Nominal thresholds; adjust kBatteryDivider first if a meter disagrees.
-constexpr int kUsbMinMv = 4250;     // above CV: no-cell USB rail floats ~4360
-constexpr int kChargeMinMv = 4180;  // charger CV point: charging or full
+constexpr int kUsbMinMv = 4260;     // above any cell: no-cell USB rail floats ~4360
+constexpr int kChargeMinMv = 4210;  // above full resting cell (~4200): charger CV
 }  // namespace
 
 BatteryInfo battery_info() {
@@ -73,7 +73,7 @@ BatteryInfo battery_info() {
   if (mv <= 0) return {BatteryState::kAbsent, 0, -1};
   if (mv > kUsbMinMv) return {BatteryState::kUsb, mv, -1};
   if (mv >= kChargeMinMv) return {BatteryState::kCharging, mv, -1};
-  int pct = (mv - 3300) * 100 / (4150 - 3300);
+  int pct = (mv - 3300) * 100 / (4200 - 3300);
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
   return {BatteryState::kBattery, mv, pct};
